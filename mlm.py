@@ -69,6 +69,6 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}, Average Loss: {avg_loss}")
 
     # Add validation step here if you have a validation dataset
-
-# Save the trained model
-torch.save(model.state_dict(), "transformer_model.pth")
+    if epoch % 100 == 0:
+      # Save the trained model
+      torch.save(model.state_dict(), "transformer_model.pth")
