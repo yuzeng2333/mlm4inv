@@ -45,9 +45,10 @@ def main(args):
   # Initialize the model
   model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
   model = torch.nn.DataParallel(model)
-  model.to(args.device)
-  dataloader = GenDataloader("./synthetic_many_vars/data/1.csv")
-  criterion = nn.CrossEntropyLoss()
+  device = args.device
+  model.to(device)
+  dataloader = GenDataloader("./synthetic_many_vars/data/1.csv", device)
+  criterion = nn.CrossEntropyLoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   
   # Training Loop
@@ -59,17 +60,26 @@ def main(args):
           batch_data = batch_data[0]
           # Masking a random element in each sequence of the batch
           mask_indices = np.random.randint(max_seq_len-1, size=batch_size)
+          mask_indices = torch.tensor(mask_indices)
           read_data = batch_data.clone()
           masked_data = batch_data.clone()
-          for i, idx in enumerate(mask_indices):
-              # the dimensions: batch_size, seq_len(8), 
-              masked_data[i, idx, :] = 0
-  
+
+          # Create a tensor of batch indices
+          batch_indices = torch.arange(masked_data.size(0)).to(device)
+          
+          # Mask the data
+          # This will set masked_data[i, idx, :] to 0 for each i and corresponding idx
+          masked_data[batch_indices, mask_indices, :] = 0
+
           # Forward pass
           output = model(masked_data)
           
+          masked_output = output[batch_indices, mask_indices, :]
+          masked_data = read_data[batch_indices, mask_indices, :]
+
           # Calculate loss only for the masked elements
-          loss = sum(criterion(output[i, idx, :], read_data[i, idx, :]) for i, idx in enumerate(mask_indices)) / batch_size
+          #loss = sum(criterion(output[i, idx, :], read_data[i, idx, :]) for i, idx in enumerate(mask_indices)) / batch_size
+          loss = criterion(masked_output, masked_data)
   
           # Backpropagation
           optimizer.zero_grad()
