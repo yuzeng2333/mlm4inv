@@ -95,7 +95,10 @@ def main(args):
       if epoch % 100 == 0:
         # Save the trained model
         torch.save(model.state_dict(), "transformer_model.pth")
-
+        random_index = np.random.randint(0, batch_size)
+        print(f"Random Sample at Epoch {epoch+1}:")
+        print("Masked Output:", masked_output[random_index].detach().cpu().numpy())
+        print("Masked Data:", masked_data[random_index].cpu().numpy())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('masked language model for invariant generation', parents=[get_args_parser()])
