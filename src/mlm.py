@@ -40,7 +40,7 @@ def main(args):
   num_layers = 3   # Number of sub-encoder-layers in the encoder
   dim_feedforward = 512  # Dimension of the feedforward network model in nn.TransformerEncoder
   max_seq_len = 8  # Maximum length of the input sequence
-  num_epochs = 1000
+  num_epochs = 3000
   
   # Initialize the model
   model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
@@ -48,7 +48,7 @@ def main(args):
   device = args.device
   model.to(device)
   dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", device)
-  criterion = nn.CrossEntropyLoss().to(device)
+  criterion = nn.MSELoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   
   # Training Loop
