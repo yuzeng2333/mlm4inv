@@ -1,3 +1,4 @@
 *.swp
 *.swm
 *.swn
+transformer_model.pth

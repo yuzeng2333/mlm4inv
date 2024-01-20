@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import random
 import math
-from dataloader import GenDataloader
+from dataloader import GenDataloader, canonicalize
 from config import batch_size
 import numpy as np
 import torch.optim as optim
@@ -47,7 +47,7 @@ def main(args):
   model = torch.nn.DataParallel(model)
   device = args.device
   model.to(device)
-  dataloader = GenDataloader("./synthetic_many_vars/data/1.csv", device)
+  dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", device)
   criterion = nn.CrossEntropyLoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   

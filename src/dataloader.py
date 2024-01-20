@@ -4,6 +4,19 @@ from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 from config import batch_size
 
+def canonicalize(features_tensor):
+  # Calculate the mean and standard deviation for each column
+  means = torch.mean(features_tensor, axis=0)
+  stds = torch.std(features_tensor, axis=0)
+  
+  # Ensure that std is not zero to avoid division by zero
+  stds[stds == 0] = 1
+  
+  # Subtract the mean and divide by the standard deviation for each column
+  features_tensor = (features_tensor - means) / stds
+  return features_tensor
+
+
 def GenDataloader(file_path, device):
   # Parameters
   
@@ -29,16 +42,7 @@ def GenDataloader(file_path, device):
   
   # Move the tensor to CUDA device
   features_tensor = features_tensor.to(device)
-  
-  # Calculate the mean and standard deviation for each column
-  means = torch.mean(features_tensor, axis=0)
-  stds = torch.std(features_tensor, axis=0)
-  
-  # Ensure that std is not zero to avoid division by zero
-  stds[stds == 0] = 1
-  
-  # Subtract the mean and divide by the standard deviation for each column
-  features_norm = (features - means) / stds
+  features_tensor = canonicalize(features_tensor)
 
   # Convert to PyTorch tensors
   features_tensor = features_tensor.transpose(0, 1)
@@ -47,7 +51,6 @@ def GenDataloader(file_path, device):
   assert columns % 16 == 0
   features_tensor = features_tensor.view(rows, int(columns / 16), 16)
   features_tensor = features_tensor.transpose(0, 1)
-
   
   # Create a TensorDataset
   dataset = TensorDataset(features_tensor)
