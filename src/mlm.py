@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import random
 import math
-from dataloader import GenDataloader, canonicalize
+from dataloader import GenDataloader
 from config import batch_size
 import numpy as np
 import torch.optim as optim
@@ -12,6 +12,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--device', default='cpu',
                         help='device to use for training / testing')
+    parser.add_argument('-p', '--print', action='store_true')
     return parser
 
 # Define the Transformer Model
@@ -41,6 +42,7 @@ def main(args):
   dim_feedforward = 512  # Dimension of the feedforward network model in nn.TransformerEncoder
   max_seq_len = 8  # Maximum length of the input sequence
   num_epochs = 3000
+  model_file = "transformer_model.pth"
   
   # Initialize the model
   model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
@@ -51,6 +53,7 @@ def main(args):
   criterion = nn.MSELoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   
+
   # Training Loop
   for epoch in range(num_epochs):
       model.train()  # Set the model to training mode
@@ -70,6 +73,18 @@ def main(args):
           # Mask the data
           # This will set masked_data[i, idx, :] to 0 for each i and corresponding idx
           masked_data[batch_indices, mask_indices, :] = 0
+
+          # print the predicted value with saved model parameters
+          if args.print:
+            state_dict = torch.load(model_file)
+            model.load_state_dict(state_dict)
+            model.eval()
+            predict = model(masked_data)
+            masked_pred = predict[0, mask_indices[0], :]
+            masked_data = read_data[0, mask_indices[0], :]
+            print("=== pred: ", masked_pred)
+            print("=== target: ", masked_data)
+            return 
 
           # Forward pass
           output = model(masked_data)
@@ -94,7 +109,7 @@ def main(args):
       # Add validation step here if you have a validation dataset
       if epoch % 100 == 0:
         # Save the trained model
-        torch.save(model.state_dict(), "transformer_model.pth")
+        torch.save(model.state_dict(), model_file)
         random_index = np.random.randint(0, batch_size)
         print(f"Random Sample at Epoch {epoch+1}:")
         print("Masked Output:", masked_output[random_index].detach().cpu().numpy())
