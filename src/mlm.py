@@ -25,7 +25,8 @@ class TransformerModel(nn.Module):
         self.decoder = nn.Linear(dim_feedforward, input_size)
 
     def forward(self, src):
-        embed = self.embedding(src) * math.sqrt(self.embedding.out_features)
+        embed = self.embedding(src)
+        #embed = embed * math.sqrt(self.embedding.out_features)
         encoder_output = self.transformer_encoder(embed)
         output = self.decoder(encoder_output)
         return output
