@@ -51,7 +51,7 @@ def main(args):
   model.to(device)
   dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", device)
   criterion = nn.MSELoss().to(device)
-  optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
+  optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
   
 
   # Training Loop
