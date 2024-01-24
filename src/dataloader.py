@@ -5,8 +5,8 @@ import numpy as np
 
 def canonicalize(features_tensor, axis):
   # Calculate the mean and standard deviation for each column
-  means = torch.mean(features_tensor, axis=axis, keepdim=True)
-  stds = torch.std(features_tensor, axis=axis, keepdim=True)
+  means = torch.mean(features_tensor, axis=axis, keepdim=True).detach()
+  stds = torch.std(features_tensor, axis=axis, keepdim=True).detach()
 
   # Ensure that std is not zero to avoid division by zero
   stds[stds == 0] = 1

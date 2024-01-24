@@ -30,9 +30,9 @@ class TransformerModel(nn.Module):
         #embed = embed * math.sqrt(self.embedding.out_features)
         encoder_output = self.transformer_encoder(embed)
         decoder_output = self.decoder(encoder_output)
-        #output = canonicalize(decoder_output, 2)
-        #return output
-        return decoder_output
+        output = canonicalize(decoder_output, 2)
+        return output
+        #return decoder_output
 
 def main(args):
   # check the visibility of the cuda
