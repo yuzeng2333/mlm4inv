@@ -2,7 +2,6 @@ import torch
 import csv
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-from config import batch_size
 
 def canonicalize(features_tensor):
   # Calculate the mean and standard deviation for each column
@@ -17,7 +16,7 @@ def canonicalize(features_tensor):
   return features_tensor
 
 
-def GenDataloader(file_path, device):
+def GenDataloader(file_path, batch_size, device):
   # Parameters
   
   # Initialize an empty list to hold the feature data

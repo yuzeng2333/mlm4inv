@@ -4,7 +4,6 @@ import torch.nn as nn
 import random
 import math
 from dataloader import GenDataloader
-from config import batch_size
 import numpy as np
 import torch.optim as optim
 
@@ -13,6 +12,8 @@ def get_args_parser():
     parser.add_argument('--device', default='cpu',
                         help='device to use for training / testing')
     parser.add_argument('-p', '--print', action='store_true')
+    parser.add_argument('-b', '--batch_size', default=32, type=int,
+                    help="batch size of the input data")
     return parser
 
 # Define the Transformer Model
@@ -49,8 +50,9 @@ def main(args):
   model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
   model = torch.nn.DataParallel(model)
   device = args.device
+  batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", device)
+  dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, device)
   criterion = nn.MSELoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
   
