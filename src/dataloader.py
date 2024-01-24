@@ -3,10 +3,10 @@ import csv
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 
-def canonicalize(features_tensor):
+def canonicalize(features_tensor, axis):
   # Calculate the mean and standard deviation for each column
-  means = torch.mean(features_tensor, axis=0)
-  stds = torch.std(features_tensor, axis=0)
+  means = torch.mean(features_tensor, axis=axis)
+  stds = torch.std(features_tensor, axis=axis)
   
   # Ensure that std is not zero to avoid division by zero
   stds[stds == 0] = 1
@@ -41,7 +41,6 @@ def GenDataloader(file_path, batch_size, device):
   
   # Move the tensor to CUDA device
   features_tensor = features_tensor.to(device)
-  features_tensor = canonicalize(features_tensor)
 
   # Convert to PyTorch tensors
   features_tensor = features_tensor.transpose(0, 1)

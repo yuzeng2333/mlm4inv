@@ -1,5 +1,5 @@
 all: 
-	python -b 1 mlm.py 
+	python mlm.py -b 32
 
 dbg:
-	python -m pdb -b 32 mlm.py 
+	python -m pdb mlm.py -b 1

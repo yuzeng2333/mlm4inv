@@ -29,7 +29,8 @@ class TransformerModel(nn.Module):
         embed = self.embedding(src)
         #embed = embed * math.sqrt(self.embedding.out_features)
         encoder_output = self.transformer_encoder(embed)
-        output = self.decoder(encoder_output)
+        decoder_output = self.decoder(encoder_output)
+        output = canonicalize(decoder_output, 2)
         return output
 
 def main(args):
@@ -64,6 +65,7 @@ def main(args):
   
       for batch_idx, batch_data in enumerate(dataloader):
           batch_data = batch_data[0]
+          batch_data = canonicalize(batch_data, 2)
           # Masking a random element in each sequence of the batch
           mask_indices = np.random.randint(max_seq_len-1, size=batch_size)
           mask_indices = torch.tensor(mask_indices)
