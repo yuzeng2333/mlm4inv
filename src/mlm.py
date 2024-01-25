@@ -46,7 +46,7 @@ def main(args):
   num_layers = 3   # Number of sub-encoder-layers in the encoder
   dim_feedforward = 512  # Dimension of the feedforward network model in nn.TransformerEncoder
   max_seq_len = 8  # Maximum length of the input sequence
-  num_epochs = 3000
+  num_epochs = 1000
   model_file = "transformer_model.pth"
   
   # Initialize the model
