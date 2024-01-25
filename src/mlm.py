@@ -26,15 +26,21 @@ class Autoencoder(nn.Module):
         self.encoder = nn.Sequential(
             nn.Linear(input_size * input_len, 128),  # Flatten and reduce to 128
             nn.ReLU(),
-            nn.Linear(128, 64),  # Further reduce to 64
+            nn.Linear(128, 128),            
             nn.ReLU(),
-            nn.Linear(64, 32)  # Compress to latent space of size 32
+            nn.Linear(128, 128),  
+            nn.ReLU(),
+            nn.Linear(128, 128), 
+            nn.ReLU(),
+            nn.Linear(128, 128) 
         )
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(32, 64),
+            nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(64, 128),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128), 
             nn.ReLU(),
             nn.Linear(128, input_size * input_len),  # Decompress back to original size
         )
