@@ -6,6 +6,7 @@ import math
 from dataloader import GenDataloader, canonicalize
 import numpy as np
 import torch.optim as optim
+from res import ResidualAutoencoder
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
@@ -15,42 +16,6 @@ def get_args_parser():
     parser.add_argument('-b', '--batch_size', default=32, type=int,
                     help="batch size of the input data")
     return parser
-
-
-class Autoencoder(nn.Module):
-    def __init__(self, input_size, input_len):
-        super(Autoencoder, self).__init__()
-        self.input_size = input_size
-        self.input_len = input_len
-        # Encoder
-        self.encoder = nn.Sequential(
-            nn.Linear(input_size * input_len, 128),  # Flatten and reduce to 128
-            nn.ReLU(),
-            nn.Linear(128, 128),            
-            nn.ReLU(),
-            nn.Linear(128, 128),  
-            nn.ReLU(),
-            nn.Linear(128, 128), 
-            nn.ReLU(),
-            nn.Linear(128, 128) 
-        )
-        # Decoder
-        self.decoder = nn.Sequential(
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128), 
-            nn.ReLU(),
-            nn.Linear(128, input_size * input_len),  # Decompress back to original size
-        )
-
-    def forward(self, x):
-        x = x.view(x.size(0), -1)  # Flatten the input
-        x = self.encoder(x)
-        x = self.decoder(x)
-        x = x.view(x.size(0), self.input_len, self.input_size)  # Reshape back to original size
-        return x
 
 
 # Define the Transformer Model
@@ -91,7 +56,7 @@ def main(args):
   if USE_TRANSFORMER:
     model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
   else:  
-    model = Autoencoder(input_size, max_seq_len)
+    model = ResidualAutoencoder()
   model = torch.nn.DataParallel(model)
   device = args.device
   batch_size = args.batch_size
@@ -99,7 +64,6 @@ def main(args):
   dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, device)
   criterion = nn.MSELoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
-  
 
   # Training Loop
   for epoch in range(num_epochs):
