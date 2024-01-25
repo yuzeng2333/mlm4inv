@@ -16,6 +16,38 @@ def get_args_parser():
                     help="batch size of the input data")
     return parser
 
+
+class Autoencoder(nn.Module):
+    def __init__(self, input_size, input_len):
+        super(Autoencoder, self).__init__()
+        self.input_size = input_size
+        self.input_len = input_len
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(input_size * input_len, 128),  # Flatten and reduce to 128
+            nn.ReLU(),
+            nn.Linear(128, 64),  # Further reduce to 64
+            nn.ReLU(),
+            nn.Linear(64, 32)  # Compress to latent space of size 32
+        )
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(32, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, input_size * input_len),  # Decompress back to original size
+            nn.Sigmoid()  # Sigmoid activation to ensure output range [0, 1]
+        )
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)  # Flatten the input
+        x = self.encoder(x)
+        x = self.decoder(x)
+        x = x.view(x.size(0), input_len, input_size)  # Reshape back to original size
+        return x
+
+
 # Define the Transformer Model
 class TransformerModel(nn.Module):
     def __init__(self, input_size, num_heads, num_layers, dim_feedforward, max_seq_len):
@@ -36,6 +68,7 @@ class TransformerModel(nn.Module):
 
 def main(args):
   COMP_ALL = 1
+  USE_TRANSFORMER = 1
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
@@ -50,7 +83,10 @@ def main(args):
   model_file = "transformer_model.pth"
   
   # Initialize the model
-  model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
+  if USE_TRANSFORMER:
+    model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
+  else:  
+    model = Autoencoder(input_size, max_seq_len)
   model = torch.nn.DataParallel(model)
   device = args.device
   batch_size = args.batch_size
