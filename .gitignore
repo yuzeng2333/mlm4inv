@@ -2,3 +2,4 @@
 *.swm
 *.swn
 transformer_model.pth
+__pycache__
