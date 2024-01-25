@@ -37,7 +37,6 @@ class Autoencoder(nn.Module):
             nn.Linear(64, 128),
             nn.ReLU(),
             nn.Linear(128, input_size * input_len),  # Decompress back to original size
-            nn.Sigmoid()  # Sigmoid activation to ensure output range [0, 1]
         )
 
     def forward(self, x):
