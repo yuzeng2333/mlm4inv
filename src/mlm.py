@@ -44,7 +44,7 @@ class Autoencoder(nn.Module):
         x = x.view(x.size(0), -1)  # Flatten the input
         x = self.encoder(x)
         x = self.decoder(x)
-        x = x.view(x.size(0), input_len, input_size)  # Reshape back to original size
+        x = x.view(x.size(0), self.input_len, self.input_size)  # Reshape back to original size
         return x
 
 
@@ -68,7 +68,7 @@ class TransformerModel(nn.Module):
 
 def main(args):
   COMP_ALL = 1
-  USE_TRANSFORMER = 1
+  USE_TRANSFORMER = 0
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
@@ -78,7 +78,7 @@ def main(args):
   num_heads = 4    # Number of heads in the multi-head attention models
   num_layers = 3   # Number of sub-encoder-layers in the encoder
   dim_feedforward = 512  # Dimension of the feedforward network model in nn.TransformerEncoder
-  max_seq_len = 8  # Maximum length of the input sequence
+  max_seq_len = 7  # Maximum length of the input sequence
   num_epochs = 1000
   model_file = "transformer_model.pth"
   
