@@ -30,11 +30,12 @@ class TransformerModel(nn.Module):
         #embed = embed * math.sqrt(self.embedding.out_features)
         encoder_output = self.transformer_encoder(embed)
         decoder_output = self.decoder(encoder_output)
-        output = canonicalize(decoder_output, 2)
-        return output
-        #return decoder_output
+        #output = canonicalize(decoder_output, 2)
+        #return output
+        return decoder_output
 
 def main(args):
+  COMP_ALL = 1
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
@@ -78,7 +79,7 @@ def main(args):
           
           # Mask the data
           # This will set masked_data[i, idx, :] to 0 for each i and corresponding idx
-          masked_data[batch_indices, mask_indices, :] = 0
+          #masked_data[batch_indices, mask_indices, :] = 0
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -94,9 +95,13 @@ def main(args):
 
           # Forward pass
           output = model(masked_data)
-          
-          masked_output = output[batch_indices, mask_indices, :]
-          masked_data = read_data[batch_indices, mask_indices, :]
+         
+          if COMP_ALL == 1:
+            masked_output = output
+            masked_data = read_data
+          else:
+            masked_output = output[batch_indices, mask_indices, :]
+            masked_data = read_data[batch_indices, mask_indices, :]
 
           # Calculate loss only for the masked elements
           #loss = sum(criterion(output[i, idx, :], read_data[i, idx, :]) for i, idx in enumerate(mask_indices)) / batch_size
