@@ -26,18 +26,18 @@ class ResidualAutoencoder(nn.Module):
         # Encoder
         self.encoder = nn.Sequential(
             nn.Linear(7 * 16, 256),
-            ResidualBlock(256),
-            ResidualBlock(256),
-            ResidualBlock(256),
-            ResidualBlock(256),
+            #ResidualBlock(256),
+            #ResidualBlock(256),
+            #ResidualBlock(256),
+            #ResidualBlock(256),
         )
 
         # Decoder
         self.decoder = nn.Sequential(
-            ResidualBlock(256),
-            ResidualBlock(256),
-            ResidualBlock(256),
-            ResidualBlock(256),
+            #ResidualBlock(256),
+            #ResidualBlock(256),
+            #ResidualBlock(256),
+            #ResidualBlock(256),
             nn.Linear(256, 7 * 16),
         )
 

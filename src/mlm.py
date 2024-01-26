@@ -30,15 +30,19 @@ class TransformerModel(nn.Module):
     def forward(self, src):
         embed = self.embedding(src)
         #embed = embed * math.sqrt(self.embedding.out_features)
-        encoder_output = self.transformer_encoder(embed)
-        decoder_output = self.decoder(encoder_output)
+        embed = self.transformer_encoder(embed)
+        embed = self.decoder(embed)
         #output = canonicalize(decoder_output, 2)
-        #return output
-        return decoder_output
+        return embed
+        #return decoder_output
+
 
 def main(args):
-  COMP_ALL = 1
-  USE_TRANSFORMER = 0
+  COMP_ALL = 0
+  USE_TRANSFORMER = 1
+  PRINT_PARAMS = 1
+  USE_MASK = 1
+  USE_RAND = 0
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
@@ -46,8 +50,8 @@ def main(args):
   # Hyperparameters
   input_size = 16  # Size of each data in the sequence
   num_heads = 4    # Number of heads in the multi-head attention models
-  num_layers = 3   # Number of sub-encoder-layers in the encoder
-  dim_feedforward = 512  # Dimension of the feedforward network model in nn.TransformerEncoder
+  num_layers = 1   # Number of sub-encoder-layers in the encoder
+  dim_feedforward = 64  # Dimension of the feedforward network model in nn.TransformerEncoder
   max_seq_len = 7  # Maximum length of the input sequence
   num_epochs = 1000
   model_file = "transformer_model.pth"
@@ -74,7 +78,10 @@ def main(args):
           batch_data = batch_data[0]
           batch_data = canonicalize(batch_data, 2)
           # Masking a random element in each sequence of the batch
-          mask_indices = np.random.randint(max_seq_len-1, size=batch_size)
+          if USE_RAND:
+            mask_indices = np.random.randint(max_seq_len-1, size=batch_size)
+          else:
+            mask_indices = np.full(batch_size, 1)
           mask_indices = torch.tensor(mask_indices)
           read_data = batch_data.clone()
           masked_data = batch_data.clone()
@@ -84,7 +91,8 @@ def main(args):
           
           # Mask the data
           # This will set masked_data[i, idx, :] to 0 for each i and corresponding idx
-          #masked_data[batch_indices, mask_indices, :] = 0
+          if USE_MASK:
+            masked_data[batch_indices, mask_indices, :] = 0
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -124,6 +132,10 @@ def main(args):
   
       # Add validation step here if you have a validation dataset
       if epoch % 100 == 0:
+        if PRINT_PARAMS:
+          for name, param in model.named_parameters():
+            print(f"Name: {name}")
+            print(f"Value: {param}")
         # Save the trained model
         torch.save(model.state_dict(), model_file)
         random_index = np.random.randint(0, batch_size)
