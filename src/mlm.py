@@ -68,6 +68,7 @@ def main(args):
   dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, device)
   criterion = nn.MSELoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
+  random_tensor = torch.randn((1, input_size))
 
   # Training Loop
   for epoch in range(num_epochs):
@@ -90,9 +91,9 @@ def main(args):
           batch_indices = torch.arange(masked_data.size(0)).to(device)
           
           # Mask the data
-          # This will set masked_data[i, idx, :] to 0 for each i and corresponding idx
+          # This will set masked_data[i, idx, :] to random values for each i and corresponding idx
           if USE_MASK:
-            masked_data[batch_indices, mask_indices, :] = 0
+            masked_data[batch_indices, mask_indices, :] = random_tensor
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -135,7 +136,6 @@ def main(args):
         if PRINT_PARAMS:
           for name, param in model.named_parameters():
             print(f"Name: {name}")
-            print(f"Value: {param}")
         # Save the trained model
         torch.save(model.state_dict(), model_file)
         random_index = np.random.randint(0, batch_size)
