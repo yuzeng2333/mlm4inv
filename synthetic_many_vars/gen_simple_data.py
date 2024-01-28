@@ -2,7 +2,7 @@ import csv
 import random
 
 # Number of data rows to generate
-num_rows = 1024
+num_rows = 1024 * 16 * 16
 
 # File name
 filename = 'simple.csv'
