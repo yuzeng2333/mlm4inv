@@ -7,6 +7,7 @@ from dataloader import GenDataloader, canonicalize
 import numpy as np
 import torch.optim as optim
 from res import ResidualAutoencoder
+from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
@@ -28,9 +29,9 @@ class TransformerModel(nn.Module):
         self.decoder = nn.Linear(dim_feedforward, input_size)
 
     def forward(self, src):
-        embed = self.embedding(src)
+        token = self.embedding(src)
         #embed = embed * math.sqrt(self.embedding.out_features)
-        embed = self.transformer_encoder(embed)
+        embed = self.transformer_encoder(token)
         embed = self.decoder(embed)
         #output = canonicalize(decoder_output, 2)
         return embed
@@ -47,14 +48,6 @@ def main(args):
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
   
-  # Hyperparameters
-  input_size = 16  # Size of each data in the sequence
-  num_heads = 4    # Number of heads in the multi-head attention models
-  num_layers = 1   # Number of sub-encoder-layers in the encoder
-  dim_feedforward = 64  # Dimension of the feedforward network model in nn.TransformerEncoder
-  max_seq_len = 7  # Maximum length of the input sequence
-  num_epochs = 1000
-  model_file = "transformer_model.pth"
   
   # Initialize the model
   if USE_TRANSFORMER:
@@ -93,7 +86,8 @@ def main(args):
           # Mask the data
           # This will set masked_data[i, idx, :] to random values for each i and corresponding idx
           if USE_MASK:
-            masked_data[batch_indices, mask_indices, :] = random_tensor
+            #masked_data[batch_indices, mask_indices, :] = random_tensor
+            masked_data[batch_indices, mask_indices, :] = 0
 
           # print the predicted value with saved model parameters
           if args.print:
