@@ -7,7 +7,7 @@ from dataloader import GenDataloader, canonicalize
 import numpy as np
 import torch.optim as optim
 from res import ResidualAutoencoder
-from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs
+from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
@@ -28,13 +28,16 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(transformer_layer, num_layers=num_layers)
         self.decoder = nn.Linear(dim_feedforward, input_size)
 
-    def forward(self, src):
+    def forward(self, src, ret_token = False):
         token = self.embedding(src)
         #embed = embed * math.sqrt(self.embedding.out_features)
         embed = self.transformer_encoder(token)
         embed = self.decoder(embed)
         #output = canonicalize(decoder_output, 2)
-        return embed
+        if ret_token:
+           return {'embed': embed, 'token': token}
+        else:
+          return embed
         #return decoder_output
 
 
@@ -75,7 +78,7 @@ def main(args):
           if USE_RAND:
             mask_indices = np.random.randint(max_seq_len-1, size=batch_size)
           else:
-            mask_indices = np.full(batch_size, 1)
+            mask_indices = np.full(batch_size, MASK_IDX)
           mask_indices = torch.tensor(mask_indices)
           read_data = batch_data.clone()
           masked_data = batch_data.clone()
@@ -102,7 +105,12 @@ def main(args):
             return 
 
           # Forward pass
-          output = model(masked_data)
+          ret_token = False
+          ret = model(masked_data, ret_token)
+          if ret_token:
+             output = ret['embed']
+          else:
+             output = ret
          
           if COMP_ALL == 1:
             masked_output = output
