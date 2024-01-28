@@ -16,7 +16,7 @@ def canonicalize(features_tensor, axis):
   return features_tensor
 
 
-def GenDataloader(file_path, batch_size, device):
+def GenDataloader(file_path, batch_size, device, shuffle=True):
   # Parameters
   
   # Initialize an empty list to hold the feature data
@@ -54,5 +54,5 @@ def GenDataloader(file_path, batch_size, device):
   dataset = TensorDataset(features_tensor)
   
   # Create a DataLoader
-  dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+  dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
   return dataloader 

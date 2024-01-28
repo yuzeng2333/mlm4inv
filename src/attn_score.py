@@ -3,6 +3,7 @@ from mlm import TransformerModel
 from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, MASK_IDX
 from dataloader import GenDataloader, canonicalize
 import torch.nn.functional as F
+import numpy as np
 
 # define the model
 model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
@@ -30,7 +31,8 @@ k_bias = attention_layer.in_proj_bias[d_model:2*d_model]
 v_bias = attention_layer.in_proj_bias[2*d_model:]
 
 # load input to calculate the attention scores
-dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", 1, 'cpu')
+batch_size = 32
+dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, 'cpu', True)
 compute_num = 1
 idx = 0
 for batch_idx, batch_data in enumerate(dataloader):
@@ -39,6 +41,10 @@ for batch_idx, batch_data in enumerate(dataloader):
         break
     batch_data = batch_data[0]
     batch_data = canonicalize(batch_data, 2)
+    batch_indices = torch.arange(batch_data.size(0))
+    mask_indices = np.full(batch_size, MASK_IDX)
+    mask_indices = torch.tensor(mask_indices)
+    batch_data[batch_indices, mask_indices, :] = 0
     ret = model(batch_data, True)
     token = ret['token']
     tokens = token[0, :, :]
@@ -55,10 +61,10 @@ attention_scores = torch.matmul(Q[MASK_IDX], K.transpose(0, 1))  # [seq_len]
 
 # Scaling by the square root of the dimension of K (assuming qkv_size = dimension of K)
 d_k = K.size(-1)
-#scaled_attention_scores = attention_scores / torch.sqrt(d_k)
+scaled_attention_scores = attention_scores / torch.sqrt(torch.tensor(d_k))
 
 # Apply softmax to get the attention weights (a distribution over all tokens)
-attention_weights = F.softmax(attention_scores, dim=-1)  # [seq_len]
+attention_weights = F.softmax(scaled_attention_scores, dim=-1)  # [seq_len]
 
 # print the attention weights
 print(attention_weights)

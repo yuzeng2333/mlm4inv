@@ -8,6 +8,7 @@ import numpy as np
 import torch.optim as optim
 from res import ResidualAutoencoder
 from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX
+from customAttn import CustomTransformerEncoderLayer, CustomTransformerEncoder
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
@@ -24,20 +25,20 @@ class TransformerModel(nn.Module):
     def __init__(self, input_size, num_heads, num_layers, dim_feedforward, max_seq_len):
         super(TransformerModel, self).__init__()
         self.embedding = nn.Linear(input_size, dim_feedforward)
-        transformer_layer = nn.TransformerEncoderLayer(d_model=dim_feedforward, nhead=num_heads, batch_first=True)
-        self.transformer_encoder = nn.TransformerEncoder(transformer_layer, num_layers=num_layers)
+        transformer_layer = CustomTransformerEncoderLayer(d_model=dim_feedforward, nhead=num_heads, batch_first=True)
+        self.transformer_encoder = CustomTransformerEncoder(transformer_layer, num_layers=num_layers)
         self.decoder = nn.Linear(dim_feedforward, input_size)
 
     def forward(self, src, ret_token = False):
         token = self.embedding(src)
-        #embed = embed * math.sqrt(self.embedding.out_features)
-        embed = self.transformer_encoder(token)
+        embed, attn_weight_list = self.transformer_encoder(token)
         embed = self.decoder(embed)
+        #embed = self.decoder(token)
         #output = canonicalize(decoder_output, 2)
         if ret_token:
-           return {'embed': embed, 'token': token}
+           return {'embed': embed, 'token': token, 'attn_weight_list': attn_weight_list}
         else:
-          return embed
+          return {'embed': embed, 'attn_weight_list': attn_weight_list}
         #return decoder_output
 
 
@@ -61,7 +62,7 @@ def main(args):
   device = args.device
   batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, device)
+  dataloader = GenDataloader("../synthetic_many_vars/data/simple.csv", batch_size, device, False)
   criterion = nn.MSELoss().to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))
@@ -107,10 +108,7 @@ def main(args):
           # Forward pass
           ret_token = False
           ret = model(masked_data, ret_token)
-          if ret_token:
-             output = ret['embed']
-          else:
-             output = ret
+          output = ret['embed']
          
           if COMP_ALL == 1:
             masked_output = output
