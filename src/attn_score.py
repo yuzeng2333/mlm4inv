@@ -35,6 +35,7 @@ batch_size = 32
 dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, 'cpu', True)
 compute_num = 1
 idx = 0
+attn_weight_list = []
 for batch_idx, batch_data in enumerate(dataloader):
     idx += 1
     if idx > compute_num:
@@ -47,6 +48,7 @@ for batch_idx, batch_data in enumerate(dataloader):
     batch_data[batch_indices, mask_indices, :] = 0
     ret = model(batch_data, True)
     token = ret['token']
+    attn_weight_list = ret['attn_weight_list']
     tokens = token[0, :, :]
     token_interest = tokens[MASK_IDX, :]
 
@@ -67,4 +69,7 @@ scaled_attention_scores = attention_scores / torch.sqrt(torch.tensor(d_k))
 attention_weights = F.softmax(scaled_attention_scores, dim=-1)  # [seq_len]
 
 # print the attention weights
+print("== computed attention weights:")
 print(attention_weights)
+print("== attention weights from model:")
+print(attn_weight_list[0][0, MASK_IDX, :])

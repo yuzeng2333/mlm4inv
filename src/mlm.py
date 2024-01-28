@@ -109,6 +109,8 @@ def main(args):
           ret_token = False
           ret = model(masked_data, ret_token)
           output = ret['embed']
+          attn_weight_list = ret['attn_weight_list']
+          attn_weights = attn_weight_list[0]
          
           if COMP_ALL == 1:
             masked_output = output
@@ -136,6 +138,8 @@ def main(args):
         if PRINT_PARAMS:
           for name, param in model.named_parameters():
             print(f"Name: {name}")
+        # print attn weights
+        print("attn_weights: ", attn_weights[0][1])
         # Save the trained model
         torch.save(model.state_dict(), model_file)
         random_index = np.random.randint(0, batch_size)
