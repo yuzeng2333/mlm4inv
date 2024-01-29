@@ -19,6 +19,9 @@ def get_args_parser():
                     help="batch size of the input data")
     parser.add_argument('-a', '--all', action='store_true',
                     help="run all batches")
+    # add epoch number
+    parser.add_argument('-e', '--epoch', default=1000, type=int,
+                    help="epoch number")
     return parser
 
 
@@ -95,7 +98,7 @@ def main(args):
   random_tensor = torch.randn((1, input_size))
 
   # Training Loop
-  for epoch in range(num_epochs):
+  for epoch in range(args.epoch):
       model.train()  # Set the model to training mode
       total_loss = 0
 
