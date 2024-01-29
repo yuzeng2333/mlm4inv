@@ -17,8 +17,24 @@ def get_args_parser():
     parser.add_argument('-p', '--print', action='store_true')
     parser.add_argument('-b', '--batch_size', default=32, type=int,
                     help="batch size of the input data")
+    parser.add_argument('-a', '--all', action='store_true',
+                    help="run all batches")
     return parser
 
+
+def sort_tensor(tensor, mask_idx):
+  # assert the tensor is 3D
+  assert tensor.dim() == 3
+  values, indices = tensor[:, mask_idx, :].sort(dim=1)
+  # get the second dimension
+  seq_len = tensor.size(1)
+
+  # Expand indices to use for gathering across the entire tensor
+  indices_expanded = indices.unsqueeze(1).expand(-1, seq_len, -1)
+
+  # Reorder the entire tensor based on the sorted indices of the first row
+  tensor = torch.gather(tensor, 2, indices_expanded)
+  return tensor
 
 # Define the Transformer Model
 class TransformerModel(nn.Module):
@@ -41,6 +57,13 @@ class TransformerModel(nn.Module):
           return {'embed': embed, 'attn_weight_list': attn_weight_list}
         #return decoder_output
 
+# TODO:
+# Method 1: Do more data preprocessing: augment each data a with: 
+# (1) pick another random one smaller than it a_s, 
+# (2) pick another random one larger than it a_l, 
+# (3) a - a_s,
+# (4) a_l - a
+# Method 2: sort the data according to the values of the masked variable
 
 def main(args):
   COMP_ALL = 0
@@ -48,7 +71,10 @@ def main(args):
   PRINT_PARAMS = 1
   USE_MASK = 1
   USE_RAND = 0
-  RUN_ALL_BATCH = 0
+  if args.all:
+    RUN_ALL_BATCH = 1
+  else:
+    RUN_ALL_BATCH = 0
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
@@ -64,7 +90,7 @@ def main(args):
   batch_size = args.batch_size
   model.to(device)
   dataloader = GenDataloader("../synthetic_many_vars/data/simple.csv", batch_size, device, False)
-  criterion = nn.MSELoss().to(device)
+  criterion = nn.MSELoss(reduction='sum').to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))
 
@@ -81,6 +107,7 @@ def main(args):
           if batch_idx > max_batch_idx:
               break
           batch_data = batch_data[0]
+          batch_data = sort_tensor(batch_data, MASK_IDX)
           batch_data = canonicalize(batch_data, 2)
           # Masking a random element in each sequence of the batch
           if USE_RAND:
