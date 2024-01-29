@@ -48,6 +48,7 @@ def main(args):
   PRINT_PARAMS = 1
   USE_MASK = 1
   USE_RAND = 0
+  RUN_ALL_BATCH = 0
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
@@ -71,8 +72,14 @@ def main(args):
   for epoch in range(num_epochs):
       model.train()  # Set the model to training mode
       total_loss = 0
-  
+
+      if RUN_ALL_BATCH:
+        max_batch_idx = len(dataloader)
+      else: 
+        max_batch_idx = 32
       for batch_idx, batch_data in enumerate(dataloader):
+          if batch_idx > max_batch_idx:
+              break
           batch_data = batch_data[0]
           batch_data = canonicalize(batch_data, 2)
           # Masking a random element in each sequence of the batch
