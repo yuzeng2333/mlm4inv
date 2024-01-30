@@ -2,6 +2,8 @@ import torch
 import csv
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
+from mlm import sort_tensor
+from config import MASK_IDX
 
 def canonicalize(features_tensor, axis):
   # Calculate the mean and standard deviation for each column
@@ -49,7 +51,8 @@ def GenDataloader(file_path, batch_size, device, shuffle=True):
   assert columns % 16 == 0
   features_tensor = features_tensor.view(rows, int(columns / 16), 16)
   features_tensor = features_tensor.transpose(0, 1)
-  
+  features_tensor = sort_tensor(features_tensor, MASK_IDX)
+
   # Create a TensorDataset
   dataset = TensorDataset(features_tensor)
   
