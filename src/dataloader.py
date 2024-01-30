@@ -49,9 +49,9 @@ def GenDataloader(file_path, batch_size, device, shuffle=True):
   rows = features_tensor.size(0)
   columns = features_tensor.size(1)
   assert columns % 16 == 0
+  features_tensor = sort_tensor(features_tensor, MASK_IDX, 2)
   features_tensor = features_tensor.view(rows, int(columns / 16), 16)
   features_tensor = features_tensor.transpose(0, 1)
-  features_tensor = sort_tensor(features_tensor, MASK_IDX)
 
   # Create a TensorDataset
   dataset = TensorDataset(features_tensor)
