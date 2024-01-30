@@ -34,6 +34,7 @@ class TransformerModel(nn.Module):
         transformer_layer = CustomTransformerEncoderLayer(d_model=dim_feedforward, nhead=num_heads, batch_first=True)
         self.transformer_encoder = CustomTransformerEncoder(transformer_layer, num_layers=num_layers)
         self.decoder = nn.Linear(dim_feedforward, input_size)
+        self.trainable_mask_value = nn.Parameter(torch.randn((1, input_size)))
 
     def forward(self, src, ret_token = False):
         token = self.embedding(src)
@@ -79,9 +80,9 @@ def main(args):
   device = args.device
   batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/simple.csv", batch_size, device, False)
+  dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, device, False)
   criterion = nn.MSELoss(reduction='mean').to(device)
-  optimizer = optim.Adam(model.parameters(), lr=0.01)  # Learning rate is 0.001 by default
+  optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))
 
   # Training Loop
@@ -115,7 +116,7 @@ def main(args):
           # This will set masked_data[i, idx, :] to random values for each i and corresponding idx
           if USE_MASK:
             #masked_data[batch_indices, mask_indices, :] = random_tensor
-            masked_data[batch_indices, mask_indices, :] = 0
+            masked_data[batch_indices, mask_indices, :] = model.module.trainable_mask_value
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -155,15 +156,18 @@ def main(args):
           total_loss += loss.item()
   
       avg_loss = total_loss / len(dataloader)
-      print(f"Epoch {epoch+1}/{num_epochs}, Average Loss: {avg_loss}")
+      if epoch % 20 == 0:
+        print(f"Epoch {epoch+1}/{args.epoch}, Average Loss: {avg_loss}")
   
       # Add validation step here if you have a validation dataset
       if epoch % 100 == 0:
-        if PRINT_PARAMS:
-          for name, param in model.named_parameters():
-            print(f"Name: {name}")
+        #if PRINT_PARAMS:
+        #  for name, param in model.named_parameters():
+        #    print(f"Name: {name}")
         # print attn weights
         print("attn_weights: ", attn_weights[0][1])
+        print("attn_weights: ", attn_weights[1][1])
+        print("attn_weights: ", attn_weights[2][1])
         # Save the trained model
         torch.save(model.state_dict(), model_file)
         random_index = np.random.randint(0, batch_size)
