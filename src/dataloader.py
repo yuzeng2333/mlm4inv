@@ -2,7 +2,7 @@ import torch
 import csv
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-from mlm import sort_tensor
+from util import sort_tensor
 from config import MASK_IDX
 
 def canonicalize(features_tensor, axis):

@@ -7,6 +7,7 @@ from dataloader import GenDataloader, canonicalize
 import numpy as np
 import torch.optim as optim
 from res import ResidualAutoencoder
+from util import sort_tensor
 from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX
 from customAttn import CustomTransformerEncoderLayer, CustomTransformerEncoder
 
@@ -24,20 +25,6 @@ def get_args_parser():
                     help="epoch number")
     return parser
 
-
-def sort_tensor(tensor, mask_idx):
-  # assert the tensor is 3D
-  assert tensor.dim() == 3
-  values, indices = tensor[:, mask_idx, :].sort(dim=1)
-  # get the second dimension
-  seq_len = tensor.size(1)
-
-  # Expand indices to use for gathering across the entire tensor
-  indices_expanded = indices.unsqueeze(1).expand(-1, seq_len, -1)
-
-  # Reorder the entire tensor based on the sorted indices of the first row
-  tensor = torch.gather(tensor, 2, indices_expanded)
-  return tensor
 
 # Define the Transformer Model
 class TransformerModel(nn.Module):
