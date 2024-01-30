@@ -80,7 +80,7 @@ def main(args):
   device = args.device
   batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/1.csv", batch_size, device, False)
+  dataloader = GenDataloader("../synthetic_many_vars/data/simple.csv", batch_size, device, False)
   criterion = nn.MSELoss(reduction='mean').to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))
@@ -98,7 +98,7 @@ def main(args):
           if batch_idx > max_batch_idx:
               break
           batch_data = batch_data[0]
-          batch_data = sort_tensor(batch_data, MASK_IDX)
+          #batch_data = sort_tensor(batch_data, MASK_IDX)
           batch_data = canonicalize(batch_data, 2)
           # Masking a random element in each sequence of the batch
           if USE_RAND:
