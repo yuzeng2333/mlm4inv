@@ -80,7 +80,7 @@ def main(args):
   device = args.device
   batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/simple.csv", batch_size, device, False)
+  dataloader = GenDataloader("../synthetic_many_vars/data/0.csv", batch_size, device, aug_data=True, shuffle=False)
   criterion = nn.MSELoss(reduction='mean').to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))

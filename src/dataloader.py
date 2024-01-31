@@ -18,7 +18,7 @@ def canonicalize(features_tensor, axis):
   return features_tensor
 
 
-def GenDataloader(file_path, batch_size, device, shuffle=True):
+def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
   # Parameters
   
   # Initialize an empty list to hold the feature data
@@ -48,10 +48,55 @@ def GenDataloader(file_path, batch_size, device, shuffle=True):
   features_tensor = features_tensor.transpose(0, 1)
   rows = features_tensor.size(0)
   columns = features_tensor.size(1)
-  assert columns % 16 == 0
-  #features_tensor = sort_tensor(features_tensor, MASK_IDX, 2)
-  features_tensor = features_tensor.view(rows, int(columns / 16), 16)
-  features_tensor = features_tensor.transpose(0, 1)
+  if aug_data:
+    features_tensor = canonicalize(features_tensor, 1)
+    features_tensor = sort_tensor(features_tensor, MASK_IDX, size=2)
+    smaller_tensor = torch.zeros((rows, columns), device=device)
+    small_tensor = torch.zeros((rows, columns), device=device)
+    large_tensor = torch.zeros((rows, columns), device=device)
+    larger_tensor = torch.zeros((rows, columns), device=device)
+
+    # Initialize idx tensors with the correct shape
+    idx1 = torch.zeros((columns,), device=device, dtype=torch.int64)
+    idx2 = torch.zeros((columns,), device=device, dtype=torch.int64)
+    idx3 = torch.zeros((columns,), device=device, dtype=torch.int64)
+    idx4 = torch.zeros((columns,), device=device, dtype=torch.int64)
+
+    # generate the column indices
+    for c in range(columns):
+        if c == 0:
+          # randomly pick two indices, idx1 <= idx2 <= c
+          idx1[c] = 0
+          idx2[c] = 0
+        elif c == 1:
+          idx1[c] = 0
+          idx2[c] = 1
+        else:
+          idx1[c] = torch.randint(0, c-1, (1,), device=device)
+          idx2[c] = torch.randint(idx1[c]+1, c, (1,), device=device)
+        if c == columns - 2:
+          idx3[c] = columns - 2
+          idx4[c] = columns - 1
+        elif c == columns - 1:
+          idx3[c] = columns - 1
+          idx4[c] = columns - 1
+        else:
+          idx3[c] = torch.randint(c+1, columns-1, (1,), device=device)
+          idx4[c] = torch.randint(idx3[c]+1, columns, (1,), device=device)
+
+    # Use the indices with torch.gather
+    smaller_tensor = torch.gather(features_tensor, 1, idx1.unsqueeze(0).expand(rows, -1))
+    small_tensor = torch.gather(features_tensor, 1, idx2.unsqueeze(0).expand(rows, -1))
+    large_tensor = torch.gather(features_tensor, 1, idx3.unsqueeze(0).expand(rows, -1))
+    larger_tensor = torch.gather(features_tensor, 1, idx4.unsqueeze(0).expand(rows, -1))
+
+    # Concatenate tensors along the desired dimension
+    features_tensor = torch.cat((smaller_tensor, small_tensor, features_tensor, large_tensor, larger_tensor), 0)
+  else:
+    assert columns % 16 == 0
+    #features_tensor = sort_tensor(features_tensor, MASK_IDX, 2)
+    features_tensor = features_tensor.view(rows, int(columns / 16), 16)
+    features_tensor = features_tensor.transpose(0, 1)
 
   # Create a TensorDataset
   dataset = TensorDataset(features_tensor)
