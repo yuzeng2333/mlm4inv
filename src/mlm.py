@@ -62,6 +62,7 @@ def main(args):
   PRINT_PARAMS = 1
   USE_MASK = 1
   USE_RAND = 0
+  AUG_DATA = 1
   if args.all:
     RUN_ALL_BATCH = 1
   else:
@@ -80,7 +81,7 @@ def main(args):
   device = args.device
   batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/0.csv", batch_size, device, aug_data=True, shuffle=False)
+  dataloader = GenDataloader("../synthetic_many_vars/data/simple.csv", batch_size, device, aug_data=AUG_DATA, shuffle=False)
   criterion = nn.MSELoss(reduction='mean').to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))
@@ -99,7 +100,8 @@ def main(args):
               break
           batch_data = batch_data[0]
           #batch_data = sort_tensor(batch_data, MASK_IDX)
-          batch_data = canonicalize(batch_data, 2)
+          if not AUG_DATA:
+            batch_data = canonicalize(batch_data, 2)
           # Masking a random element in each sequence of the batch
           if USE_RAND:
             mask_indices = np.random.randint(max_seq_len-1, size=batch_size)
@@ -140,6 +142,9 @@ def main(args):
           if COMP_ALL == 1:
             masked_output = output
             masked_data = read_data
+          elif AUG_DATA:
+            masked_output = output[batch_indices, mask_indices, 2]
+            masked_data = read_data[batch_indices, mask_indices, 2]
           else:
             masked_output = output[batch_indices, mask_indices, :]
             masked_data = read_data[batch_indices, mask_indices, :]

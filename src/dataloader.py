@@ -90,14 +90,23 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
     large_tensor = torch.gather(features_tensor, 1, idx3.unsqueeze(0).expand(rows, -1))
     larger_tensor = torch.gather(features_tensor, 1, idx4.unsqueeze(0).expand(rows, -1))
 
+    smaller_tensor = smaller_tensor.unsqueeze(2)
+    small_tensor = small_tensor.unsqueeze(2)
+    large_tensor = large_tensor.unsqueeze(2)
+    larger_tensor = larger_tensor.unsqueeze(2)
+    features_tensor = features_tensor.unsqueeze(2)
+
     # Concatenate tensors along the desired dimension
-    features_tensor = torch.cat((smaller_tensor, small_tensor, features_tensor, large_tensor, larger_tensor), 0)
+    features_tensor = torch.cat((smaller_tensor, small_tensor, features_tensor, large_tensor, larger_tensor), 2)
+    # shuffle along the second dimension
+    shuffle_indices = torch.randperm(features_tensor.size(1), device=device)
+    features_tensor = features_tensor[:, shuffle_indices, :]
   else:
     assert columns % 16 == 0
     #features_tensor = sort_tensor(features_tensor, MASK_IDX, 2)
     features_tensor = features_tensor.view(rows, int(columns / 16), 16)
-    features_tensor = features_tensor.transpose(0, 1)
 
+  features_tensor = features_tensor.transpose(0, 1)
   # Create a TensorDataset
   dataset = TensorDataset(features_tensor)
   
