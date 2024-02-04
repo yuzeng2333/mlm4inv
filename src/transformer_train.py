@@ -6,7 +6,6 @@ import math
 from dataloader import GenDataloader, canonicalize
 import numpy as np
 import torch.optim as optim
-import xgboost as xgb
 from res import ResidualAutoencoder
 from util import sort_tensor
 from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX
@@ -36,7 +35,7 @@ class TransformerModel(nn.Module):
         #return decoder_output
 
 
-def transformer_train(args):
+def transformer_train(args, file_path):
   COMP_ALL = 0
   USE_TRANSFORMER = 1
   PRINT_PARAMS = 1
@@ -61,7 +60,7 @@ def transformer_train(args):
   device = args.device
   batch_size = args.batch_size
   model.to(device)
-  dataloader = GenDataloader("../synthetic_many_vars/data/simple_v2.csv", batch_size, device, aug_data=AUG_DATA, shuffle=False)
+  dataloader = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
   if AUG_DATA:
      criterion = nn.MSELoss(reduction='sum').to(device)
   else:

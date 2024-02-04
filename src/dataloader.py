@@ -5,6 +5,19 @@ import numpy as np
 from util import sort_tensor
 from config import MASK_IDX
 
+def canonicalize_np(features_array, axis):
+    # Calculate the mean and standard deviation for each column
+    means = np.mean(features_array, axis=axis, keepdims=True)
+    stds = np.std(features_array, axis=axis, keepdims=True)
+
+    # Ensure that std is not zero to avoid division by zero
+    stds[stds == 0] = 1
+    
+    # Subtract the mean and divide by the standard deviation for each column
+    features_array = (features_array - means) / stds
+    return features_array
+
+
 def canonicalize(features_tensor, axis):
   # Calculate the mean and standard deviation for each column
   means = torch.mean(features_tensor, axis=axis, keepdim=True).detach()
@@ -17,19 +30,20 @@ def canonicalize(features_tensor, axis):
   features_tensor = (features_tensor - means) / stds
   return features_tensor
 
-
-def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
-  # Parameters
-  
+def read_data(file_path):
   # Initialize an empty list to hold the feature data
   features = []
+  # dict for variable names and their indices
+  var_dict = {}
   
   # Open the CSV file
   with open(file_path, newline='') as csvfile:
       reader = csv.reader(csvfile)
-  
-      # Skip the header row
-      next(reader, None)
+      # read the first row
+      header = next(reader)
+      # fill the dict with variable names and their indices
+      for i, var in enumerate(header):
+          var_dict[var] = i 
   
       # Read each row after the header
       for row in reader:
@@ -37,6 +51,10 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
           features.append(cleaned_row)
 
   features = np.array(features)
+  return features, var_dict
+
+def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
+  features, var_dict = read_data(file_path)
   
   # Convert numpy array to torch tensor
   features_tensor = torch.tensor(features).float()

@@ -7,3 +7,4 @@ max_seq_len = 7  # Maximum length of the input sequence
 num_epochs = 1000
 MASK_IDX = 1
 model_file = "transformer_model.pth"
+MASK_VAR = y
