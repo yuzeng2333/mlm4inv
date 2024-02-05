@@ -53,7 +53,7 @@ def read_data(file_path):
   features = np.array(features)
   return features, var_dict
 
-def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
+def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, random=False):
   features, var_dict = read_data(file_path)
   
   # Convert numpy array to torch tensor
@@ -90,8 +90,12 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
           idx1[c] = 0
           idx2[c] = 1
         else:
-          idx1[c] = torch.randint(0, c-1, (1,), device=device)
-          idx2[c] = torch.randint(idx1[c]+1, c, (1,), device=device)
+          if random:
+            idx1[c] = torch.randint(0, c-1, (1,), device=device)
+            idx2[c] = torch.randint(idx1[c]+1, c, (1,), device=device)
+          else:
+            idx1[c] = c-2
+            idx2[c] = c-1
         if c == columns - 2:
           idx3[c] = columns - 2
           idx4[c] = columns - 1
@@ -99,8 +103,12 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True):
           idx3[c] = columns - 1
           idx4[c] = columns - 1
         else:
-          idx3[c] = torch.randint(c+1, columns-1, (1,), device=device)
-          idx4[c] = torch.randint(idx3[c]+1, columns, (1,), device=device)
+          if random:
+            idx3[c] = torch.randint(c+1, columns-1, (1,), device=device)
+            idx4[c] = torch.randint(idx3[c]+1, columns, (1,), device=device)
+          else:
+            idx3[c] = c
+            idx4[c] = c+1
 
     # Use the indices with torch.gather
     smaller_tensor = torch.gather(features_tensor, 1, idx1.unsqueeze(0).expand(rows, -1))

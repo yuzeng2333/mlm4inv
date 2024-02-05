@@ -26,12 +26,13 @@ def get_args_parser():
     # add epoch number
     parser.add_argument('-e', '--epoch', default=1000, type=int,
                         help="epoch number")
-    parser.add_argument('-m', '--model', type=str, default='xgboost',
+    parser.add_argument('-m', '--model', type=str, default='transformer',
                         help="choose the model type: transformer or xgboost")
     return parser
 
 def main(args):
-    file_path = "../synthetic_many_vars/data/1.csv"
+    #file_path = "../synthetic_many_vars/data/1.csv"
+    file_path = "../synthetic_many_vars/function_data.csv"
     if args.model == 'transformer':
         transformer_train(args, file_path)
     elif args.model == 'xgboost':
