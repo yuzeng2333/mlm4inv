@@ -33,7 +33,7 @@ g_expression = "x + 2*z"
 
 # Number of samples
 #num_samples = int(input("Enter the number of samples: "))
-num_samples = 16*1024
+num_samples = 16*1024*4
 
 # Get the data
 variables, data = sample_and_evaluate([f_expression, g_expression], num_samples)
