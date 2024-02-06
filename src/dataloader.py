@@ -107,8 +107,8 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, r
             idx3[c] = torch.randint(c+1, columns-1, (1,), device=device)
             idx4[c] = torch.randint(idx3[c]+1, columns, (1,), device=device)
           else:
-            idx3[c] = c
-            idx4[c] = c+1
+            idx3[c] = c+1
+            idx4[c] = c+2
 
     # Use the indices with torch.gather
     smaller_tensor = torch.gather(features_tensor, 1, idx1.unsqueeze(0).expand(rows, -1))

@@ -31,8 +31,8 @@ def get_args_parser():
     return parser
 
 def main(args):
-    #file_path = "../synthetic_many_vars/data/1.csv"
-    file_path = "../synthetic_many_vars/function_data.csv"
+    file_path = "../synthetic_many_vars/data/simple.csv"
+    #file_path = "../synthetic_many_vars/function_data.csv"
     if args.model == 'transformer':
         transformer_train(args, file_path)
     elif args.model == 'xgboost':

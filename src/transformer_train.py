@@ -22,14 +22,19 @@ class TransformerModel(nn.Module):
         self.decoder = nn.Linear(dim_feedforward, input_size)
         self.trainable_mask_value = nn.Parameter(torch.randn((1, input_size)))
 
-    def forward(self, src, ret_token = False):
+    def forward(self, src, ret_token = False, use_extra_token=False):
         token = self.embedding(src)
         embed, attn_weight_list = self.transformer_encoder(token)
-        embed = self.decoder(embed)
-        #embed = self.decoder(token)
-        #output = canonicalize(decoder_output, 2)
+        if not use_extra_token:
+            sums = embed.sum(dim=2)
+            _, max_feature_idx = sums.max(dim=1)
+            batch_indices = torch.arange(embed.size(0))
+            selected_embed = embed[batch_indices, max_feature_idx, :]
+            embed = self.decoder(selected_embed)
+        else:
+            embed = self.decoder(embed)
         if ret_token:
-           return {'embed': embed, 'token': token, 'attn_weight_list': attn_weight_list}
+          return {'embed': embed, 'token': token, 'attn_weight_list': attn_weight_list}
         else:
           return {'embed': embed, 'attn_weight_list': attn_weight_list}
         #return decoder_output
@@ -42,6 +47,7 @@ def transformer_train(args, file_path):
   USE_MASK = 1
   USE_RAND = 0
   AUG_DATA = 1
+  USE_EXTRA_TOKEN = False
   if args.all:
     RUN_ALL_BATCH = 1
   else:
@@ -51,7 +57,6 @@ def transformer_train(args, file_path):
   print('cuda device count: ', torch.cuda.device_count())
   
   
-  # Initialize the model
   if USE_TRANSFORMER:
     model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
   else:  
@@ -62,7 +67,7 @@ def transformer_train(args, file_path):
   model.to(device)
   dataloader = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
   if AUG_DATA:
-     criterion = nn.MSELoss(reduction='sum').to(device)
+    criterion = nn.MSELoss(reduction='sum').to(device)
   else:
     criterion = nn.MSELoss(reduction='mean').to(device)
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
@@ -98,9 +103,11 @@ def transformer_train(args, file_path):
 
           # Mask the data
           # This will set masked_data[i, idx, :] to random values for each i and corresponding idx
-          if USE_MASK:
+          if USE_MASK and USE_EXTRA_TOKEN:
             #masked_data[batch_indices, mask_indices, :] = random_tensor
             masked_data[batch_indices, mask_indices, :] = model.module.trainable_mask_value
+          elif not USE_EXTRA_TOKEN:
+            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -116,12 +123,15 @@ def transformer_train(args, file_path):
 
           # Forward pass
           ret_token = False
-          ret = model(masked_data, ret_token)
+          ret = model(masked_data, ret_token, use_extra_token=USE_EXTRA_TOKEN)
           output = ret['embed']
           attn_weight_list = ret['attn_weight_list']
           attn_weights = attn_weight_list[0]
          
-          if COMP_ALL == 1:
+          if not USE_EXTRA_TOKEN:
+            masked_output = output[batch_indices, 2]
+            masked_data = read_data[batch_indices, mask_indices, 2]
+          elif COMP_ALL == 1:
             masked_output = output
             masked_data = read_data
           elif AUG_DATA:
