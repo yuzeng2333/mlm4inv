@@ -8,7 +8,7 @@ import numpy as np
 import torch.optim as optim
 from res import ResidualAutoencoder
 from util import sort_tensor
-from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX
+from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX, AUG_DATA
 from customAttn import CustomTransformerEncoderLayer, CustomTransformerEncoder
 
 
@@ -22,9 +22,9 @@ class TransformerModel(nn.Module):
         self.decoder = nn.Linear(dim_feedforward, input_size)
         self.trainable_mask_value = nn.Parameter(torch.randn((1, input_size)))
 
-    def forward(self, src, ret_token = False, use_extra_token=False):
+    def forward(self, src, ret_token = False, use_extra_token=False, src_key_padding_mask=None):
         token = self.embedding(src)
-        embed, attn_weight_list = self.transformer_encoder(token)
+        embed, attn_weight_list = self.transformer_encoder(token, src_key_padding_mask=src_key_padding_mask)
         if not use_extra_token:
             sums = embed.sum(dim=2)
             _, max_feature_idx = sums.max(dim=1)
@@ -46,7 +46,6 @@ def transformer_train(args, file_path):
   PRINT_PARAMS = 1
   USE_MASK = 1
   USE_RAND = 0
-  AUG_DATA = 1
   USE_EXTRA_TOKEN = False
   if args.all:
     RUN_ALL_BATCH = 1
@@ -55,7 +54,6 @@ def transformer_train(args, file_path):
   # check the visibility of the cuda
   print('cuda is available: ', torch.cuda.is_available())
   print('cuda device count: ', torch.cuda.device_count())
-  
   
   if USE_TRANSFORMER:
     model = TransformerModel(input_size, num_heads, num_layers, dim_feedforward, max_seq_len)
@@ -107,7 +105,14 @@ def transformer_train(args, file_path):
             #masked_data[batch_indices, mask_indices, :] = random_tensor
             masked_data[batch_indices, mask_indices, :] = model.module.trainable_mask_value
           elif not USE_EXTRA_TOKEN:
-            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
+            #masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
+            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:MASK_IDX+3 :]), dim=1)
+            masked_data[batch_indices, 2, :] = 0
+
+          # create a src_key_padding_mask
+          src_key_padding_mask = torch.zeros((batch_size, 3)).to(device)
+          src_key_padding_mask[batch_indices, 2] = 1
+          src_key_padding_mask = src_key_padding_mask.bool()
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -123,7 +128,7 @@ def transformer_train(args, file_path):
 
           # Forward pass
           ret_token = False
-          ret = model(masked_data, ret_token, use_extra_token=USE_EXTRA_TOKEN)
+          ret = model(masked_data, ret_token, use_extra_token=USE_EXTRA_TOKEN, src_key_padding_mask=src_key_padding_mask)
           output = ret['embed']
           attn_weight_list = ret['attn_weight_list']
           attn_weights = attn_weight_list[0]

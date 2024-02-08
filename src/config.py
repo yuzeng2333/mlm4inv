@@ -8,3 +8,5 @@ num_epochs = 1000
 MASK_IDX = 1
 model_file = "transformer_model.pth"
 MASK_VAR = 'y'
+data_file = "../synthetic_many_vars/data/simple.csv"
+AUG_DATA = 1

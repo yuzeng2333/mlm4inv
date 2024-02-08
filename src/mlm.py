@@ -9,7 +9,7 @@ import torch.optim as optim
 import xgboost as xgb
 from res import ResidualAutoencoder
 from util import sort_tensor
-from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX
+from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_len, model_file, num_epochs, MASK_IDX, data_file
 from customAttn import CustomTransformerEncoderLayer, CustomTransformerEncoder
 from transformer_train import transformer_train
 from xgboost_train import xgboost_train
@@ -31,7 +31,7 @@ def get_args_parser():
     return parser
 
 def main(args):
-    file_path = "../synthetic_many_vars/data/simple.csv"
+    file_path = data_file
     #file_path = "../synthetic_many_vars/function_data.csv"
     if args.model == 'transformer':
         transformer_train(args, file_path)
