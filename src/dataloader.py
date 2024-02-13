@@ -27,7 +27,8 @@ def canonicalize(features_tensor, axis):
   stds[stds == 0] = 1
   
   # Subtract the mean and divide by the standard deviation for each column
-  features_tensor = (features_tensor - means) / stds
+  features_tensor = features_tensor - means
+  features_tensor = features_tensor / stds
   return features_tensor
 
 def read_data(file_path):
@@ -53,6 +54,40 @@ def read_data(file_path):
   features = np.array(features)
   return features, var_dict
 
+def split_tensor(tensor):
+    # Create an empty list to hold the processed rows
+    processed_rows = []
+    
+    for row in tensor:
+        # Calculate max and min values of the current row
+        max_val = torch.max(row)
+        min_val = torch.min(row)
+        
+        # Check if the absolute value of max or min exceeds 10000
+        if torch.abs(max_val) > 10000 or torch.abs(min_val) > 10000:
+            raise ValueError("Absolute value of max or min exceeds 10000.")
+        
+        # Check if the absolute value of both max and min does not exceed 100
+        if torch.abs(max_val) <= 100 and torch.abs(min_val) <= 100:
+            # Do nothing and append the original row
+            processed_rows.append(row.unsqueeze(0))
+        else:
+            # If the absolute value of either max or min is between 100 and 10000
+            # Split the row into two: one with values % 100, and another with values / 100
+            sign = torch.sign(row)
+            row_abs = torch.abs(row)
+            mod_row = row_abs % 100
+            div_row = row_abs // 100
+            mod_row = mod_row * sign
+            div_row = div_row * sign
+            processed_rows.append(mod_row.unsqueeze(0))
+            processed_rows.append(div_row.unsqueeze(0))
+    
+    # Concatenate all processed rows into a new tensor
+    new_tensor = torch.cat(processed_rows, dim=0)
+    return new_tensor
+
+
 def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, random=False):
   features, var_dict = read_data(file_path)
   
@@ -64,6 +99,7 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, r
 
   # Convert to PyTorch tensors
   features_tensor = features_tensor.transpose(0, 1)
+  #features_tensor = split_tensor(features_tensor)
   rows = features_tensor.size(0)
   columns = features_tensor.size(1)
   if aug_data:

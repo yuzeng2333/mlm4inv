@@ -26,9 +26,11 @@ class TransformerModel(nn.Module):
         token = self.embedding(src)
         embed, attn_weight_list = self.transformer_encoder(token, src_key_padding_mask=src_key_padding_mask)
         if not use_extra_token:
-            sums = embed.sum(dim=2)
-            _, max_feature_idx = sums.max(dim=1)
+            #sums = embed.sum(dim=2)
+            #_, max_feature_idx = sums.max(dim=1)
             batch_indices = torch.arange(embed.size(0))
+            # set max_feature_idx to 0
+            max_feature_idx = torch.zeros(embed.size(0)).int()
             selected_embed = embed[batch_indices, max_feature_idx, :]
             embed = self.decoder(selected_embed)
         else:
@@ -105,14 +107,15 @@ def transformer_train(args, file_path):
             #masked_data[batch_indices, mask_indices, :] = random_tensor
             masked_data[batch_indices, mask_indices, :] = model.module.trainable_mask_value
           elif not USE_EXTRA_TOKEN:
-            #masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
-            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:MASK_IDX+3 :]), dim=1)
-            masked_data[batch_indices, 2, :] = 0
+            #masked_data = masked_data[:, MASK_IDX+1:MASK_IDX+4, :]
+            #masked_data = torch.cat((masked_data[:, MASK_IDX+1:MASK_IDX+5, :], masked_data[:, MASK_IDX+5:MASK_IDX+6, :]), dim=1)
+            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
+            #masked_data[batch_indices, 2, :] = 0
 
           # create a src_key_padding_mask
-          src_key_padding_mask = torch.zeros((batch_size, 3)).to(device)
-          src_key_padding_mask[batch_indices, 2] = 1
-          src_key_padding_mask = src_key_padding_mask.bool()
+          #src_key_padding_mask = torch.zeros((batch_size, 3)).to(device)
+          #src_key_padding_mask[batch_indices, 2] = 0.9
+          #src_key_padding_mask = src_key_padding_mask.bool()
 
           # print the predicted value with saved model parameters
           if args.print:
@@ -128,10 +131,12 @@ def transformer_train(args, file_path):
 
           # Forward pass
           ret_token = False
-          ret = model(masked_data, ret_token, use_extra_token=USE_EXTRA_TOKEN, src_key_padding_mask=src_key_padding_mask)
+          ret = model(masked_data, ret_token, use_extra_token=USE_EXTRA_TOKEN)
           output = ret['embed']
           attn_weight_list = ret['attn_weight_list']
           attn_weights = attn_weight_list[0]
+          avg_batch_weights = attn_weights.mean(dim=0)
+          avg_attn_weights = avg_batch_weights.mean(dim=1)
          
           if not USE_EXTRA_TOKEN:
             masked_output = output[batch_indices, 2]
@@ -148,7 +153,7 @@ def transformer_train(args, file_path):
 
           # Calculate loss only for the masked elements
           #loss = sum(criterion(output[i, idx, :], read_data[i, idx, :]) for i, idx in enumerate(mask_indices)) / batch_size
-          loss = criterion(masked_output, masked_data)
+          loss = criterion(masked_output, masked_data) #+ 0.001 * avg_attn_weights.sum()
   
           # Backpropagation
           optimizer.zero_grad()
@@ -167,9 +172,15 @@ def transformer_train(args, file_path):
         #  for name, param in model.named_parameters():
         #    print(f"Name: {name}")
         # print attn weights
-        print("attn_weights: ", attn_weights[0][1])
-        print("attn_weights: ", attn_weights[1][1])
-        print("attn_weights: ", attn_weights[2][1])
+        print("attn_weights0: ", avg_batch_weights[0])
+        #print("====================")
+        #print("attn_weights1: ", attn_weights[0][1])
+        #print("attn_weights1: ", attn_weights[1][1])
+        #print("attn_weights1: ", attn_weights[2][1])
+        #print("====================")
+        #print("attn_weights2: ", attn_weights[0][2])
+        #print("attn_weights2: ", attn_weights[1][2])
+        #print("attn_weights2: ", attn_weights[2][2])
         # Save the trained model
         torch.save(model.state_dict(), model_file)
         random_index = np.random.randint(0, batch_size)
