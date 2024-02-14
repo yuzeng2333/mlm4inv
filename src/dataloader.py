@@ -39,6 +39,14 @@ def canonicalize(features_tensor, axis):
   # Subtract the mean and divide by the standard deviation for each column
   features_tensor = features_tensor - means
   features_tensor = features_tensor / stds
+  row_to_plot = features_tensor[2, :].cpu().numpy()
+
+  # Plotting
+  plt.plot(row_to_plot)
+  plt.title("Plot of the 3rd Row of the Tensor")
+  plt.xlabel("Column Index")
+  plt.ylabel("Value")
+  plt.show()
   return features_tensor
 
 def read_data(file_path):
@@ -98,7 +106,7 @@ def split_tensor(tensor):
     return new_tensor
 
 
-def remove_outliers(data, n_std_dev=3):
+def remove_outliers(data, n_std_dev=2):
     """
     Removes columns from the data tensor that contain outlier values in any row.
     Outliers are defined as values more than n_std_dev standard deviations from the mean of each row.

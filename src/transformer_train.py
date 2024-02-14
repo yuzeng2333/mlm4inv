@@ -73,6 +73,10 @@ def transformer_train(args, file_path):
   optimizer = optim.Adam(model.parameters(), lr=0.001)  # Learning rate is 0.001 by default
   random_tensor = torch.randn((1, input_size))
 
+  if args.load:
+    state_dict = torch.load(model_file)
+    model.load_state_dict(state_dict)
+
   # Training Loop
   for epoch in range(args.epoch):
       model.train()  # Set the model to training mode
@@ -153,7 +157,7 @@ def transformer_train(args, file_path):
 
           # Calculate loss only for the masked elements
           #loss = sum(criterion(output[i, idx, :], read_data[i, idx, :]) for i, idx in enumerate(mask_indices)) / batch_size
-          loss = criterion(masked_output, masked_data) #+ 0.001 * avg_attn_weights.sum()
+          loss = criterion(masked_output, masked_data) + 0.001 * avg_attn_weights.sum()
   
           # Backpropagation
           optimizer.zero_grad()

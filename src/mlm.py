@@ -28,6 +28,8 @@ def get_args_parser():
                         help="epoch number")
     parser.add_argument('-m', '--model', type=str, default='transformer',
                         help="choose the model type: transformer or xgboost")
+    parser.add_argument('-l', '--load', action='store_true',
+                        help="if true, load the model before training")
     return parser
 
 def main(args):
