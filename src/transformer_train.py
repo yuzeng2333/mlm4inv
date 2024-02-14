@@ -107,9 +107,9 @@ def transformer_train(args, file_path):
             #masked_data[batch_indices, mask_indices, :] = random_tensor
             masked_data[batch_indices, mask_indices, :] = model.module.trainable_mask_value
           elif not USE_EXTRA_TOKEN:
-            #masked_data = masked_data[:, MASK_IDX+1:MASK_IDX+4, :]
+            masked_data = masked_data[:, MASK_IDX+1:MASK_IDX+4, :]
             #masked_data = torch.cat((masked_data[:, MASK_IDX+1:MASK_IDX+5, :], masked_data[:, MASK_IDX+5:MASK_IDX+6, :]), dim=1)
-            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
+            #masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:-2, :]), dim=1)
             #masked_data[batch_indices, 2, :] = 0
 
           # create a src_key_padding_mask

@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 from util import sort_tensor
 from config import MASK_IDX
+import matplotlib.pyplot as plt
 
 def canonicalize_np(features_array, axis):
     # Calculate the mean and standard deviation for each column
@@ -19,6 +20,15 @@ def canonicalize_np(features_array, axis):
 
 
 def canonicalize(features_tensor, axis):
+  # splot the 3rd row
+  row_to_plot = features_tensor[2, :].cpu().numpy()
+
+  # Plotting
+  plt.plot(row_to_plot)
+  plt.title("Plot of the 3rd Row of the Tensor")
+  plt.xlabel("Column Index")
+  plt.ylabel("Value")
+  plt.show()
   # Calculate the mean and standard deviation for each column
   means = torch.mean(features_tensor, axis=axis, keepdim=True).detach()
   stds = torch.std(features_tensor, axis=axis, keepdim=True).detach()
@@ -88,6 +98,36 @@ def split_tensor(tensor):
     return new_tensor
 
 
+def remove_outliers(data, n_std_dev=3):
+    """
+    Removes columns from the data tensor that contain outlier values in any row.
+    Outliers are defined as values more than n_std_dev standard deviations from the mean of each row.
+    
+    Parameters:
+    - data: A 2D PyTorch tensor where each row represents variables and each column represents a set of values.
+    - n_std_dev: The number of standard deviations from the mean to consider a value as an outlier.
+    
+    Returns:
+    - A 2D PyTorch tensor with outlier columns removed.
+    """
+    means = torch.mean(data, dim=1, keepdim=True)
+    std_devs = torch.std(data, dim=1, keepdim=True)
+    
+    # Find the difference from the mean in units of standard deviation
+    z_scores = torch.abs((data - means) / std_devs)
+    
+    # Identify columns that have any value more than n_std_dev standard deviations from the mean
+    outlier_columns = torch.any(z_scores > n_std_dev, dim=0)
+    
+    # Invert to get columns to keep
+    columns_to_keep = ~outlier_columns
+    
+    # Filter the data to keep only non-outlier columns
+    filtered_data = data[:, columns_to_keep]
+    
+    return filtered_data
+
+
 def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, random=False):
   features, var_dict = read_data(file_path)
   
@@ -99,6 +139,7 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, r
 
   # Convert to PyTorch tensors
   features_tensor = features_tensor.transpose(0, 1)
+  features_tensor = remove_outliers(features_tensor)
   #features_tensor = split_tensor(features_tensor)
   rows = features_tensor.size(0)
   columns = features_tensor.size(1)

@@ -9,5 +9,5 @@ MASK_IDX = 1
 model_file = "transformer_model.pth"
 MASK_VAR = 'y'
 #data_file = "../synthetic_many_vars/data/simple.csv"
-data_file = "../synthetic_many_vars/data/div.csv"
+data_file = "../synthetic_many_vars/data/1.csv"
 AUG_DATA = 1
