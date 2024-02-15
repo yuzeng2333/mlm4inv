@@ -24,11 +24,11 @@ def canonicalize(features_tensor, axis):
   row_to_plot = features_tensor[2, :].cpu().numpy()
 
   # Plotting
-  plt.plot(row_to_plot)
-  plt.title("Plot of the 3rd Row of the Tensor")
-  plt.xlabel("Column Index")
-  plt.ylabel("Value")
-  plt.show()
+  #plt.plot(row_to_plot)
+  #plt.title("Plot of the 3rd Row of the Tensor")
+  #plt.xlabel("Column Index")
+  #plt.ylabel("Value")
+  #plt.show()
   # Calculate the mean and standard deviation for each column
   means = torch.mean(features_tensor, axis=axis, keepdim=True).detach()
   stds = torch.std(features_tensor, axis=axis, keepdim=True).detach()
@@ -42,11 +42,11 @@ def canonicalize(features_tensor, axis):
   row_to_plot = features_tensor[2, :].cpu().numpy()
 
   # Plotting
-  plt.plot(row_to_plot)
-  plt.title("Plot of the 3rd Row of the Tensor")
-  plt.xlabel("Column Index")
-  plt.ylabel("Value")
-  plt.show()
+  #plt.plot(row_to_plot)
+  #plt.title("Plot of the 3rd Row of the Tensor")
+  #plt.xlabel("Column Index")
+  #plt.ylabel("Value")
+  #plt.show()
   return features_tensor
 
 def read_data(file_path):

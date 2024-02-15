@@ -13,6 +13,7 @@ from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_l
 from customAttn import CustomTransformerEncoderLayer, CustomTransformerEncoder
 from transformer_train import transformer_train
 from xgboost_train import xgboost_train
+from dnn import dnn_train
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
@@ -26,7 +27,7 @@ def get_args_parser():
     # add epoch number
     parser.add_argument('-e', '--epoch', default=1000, type=int,
                         help="epoch number")
-    parser.add_argument('-m', '--model', type=str, default='transformer',
+    parser.add_argument('-m', '--model', type=str, default='dnn',
                         help="choose the model type: transformer or xgboost")
     parser.add_argument('-l', '--load', action='store_true',
                         help="if true, load the model before training")
@@ -39,6 +40,8 @@ def main(args):
         transformer_train(args, file_path)
     elif args.model == 'xgboost':
         xgboost_train(args, file_path)
+    elif args.model == 'dnn':
+        dnn_train(args, file_path)
     else:
         print("Invalid model type")
         return

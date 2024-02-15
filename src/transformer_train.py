@@ -157,7 +157,7 @@ def transformer_train(args, file_path):
 
           # Calculate loss only for the masked elements
           #loss = sum(criterion(output[i, idx, :], read_data[i, idx, :]) for i, idx in enumerate(mask_indices)) / batch_size
-          loss = criterion(masked_output, masked_data) + 0.001 * avg_attn_weights.sum()
+          loss = criterion(masked_output, masked_data) + 0.005 * avg_attn_weights.sum()
   
           # Backpropagation
           optimizer.zero_grad()
