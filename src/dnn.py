@@ -102,22 +102,44 @@ def calculate_importance_pytorch(model, activations):
     activation_values.reverse()
     
     # The importance of the output layer is initially set to its activations
-    importance = [activation_values[0].detach().cpu().numpy()]
-    
+    importance = [torch.tensor(1)]
+
+    # calculate the shape of each weight
+    weight_shapes = [weight.shape for weight in weights]
+    print ("weight_shapes: ", weight_shapes)
+    # get the shape of each activation
+    activation_shapes = [activation.shape for activation in activation_values]
+    print ("activation_shapes: ", activation_shapes)
+
+    #importance = importance * weight[0] # [1] * [1, 64] = [1, 64]
+    #importantce = importance * activation[1] # [1, 64] * [64] = [1, 64]
+    #importance = importance * weight[1] # [1, 64] * [64, 64] = [1, 64]
+    #importance = importance * activation[2] # [1, 64] * [64] = [1, 64]
+    #importance = importance * weight[2] # [1, 64] * [64, 64] = [1, 64]
+    #importance = importance * activation[3] # [1, 64] * [64] = [1, 64]
+    #importance = importance * weight[3] # [1, 64] * [64, 48] = [1, 48]
+    ## flattern activation[4]
+    #activation[4] = activation[4].view(-1)
+    #importance = importance * activation[4] # [1, 48] * [48] = [1, 48]
+
     # Calculate importance scores for each layer, propagating back from the output
     for i in range(len(weights) - 1):
         # Ensure weights and activations are on the same device and are compatible for multiplication
         weight = weights[i].detach().cpu().numpy()
-        activation = activation_values[i + 1].detach().cpu().numpy()  # +1 skips input layer activation
+        activation = activation_values[i+1].detach().cpu().numpy()  # +1 skips input layer activation
         
         # Calculate the importance for the current layer
-        layer_importance = np.dot(weight.T, importance[-1] * activation)
+        # flattern activation
+        activation = activation.flatten()
+        # print the shape of weight, importance, and activation
+        print ("--- weight: ", weight.shape)
+        print ("--- importance: ", importance[-1].shape)
+        print ("--- activation: ", activation.shape)
+        tmp = np.dot(importance[-1], weight)
+        layer_importance = activation * tmp
         importance.append(layer_importance)
-    
-    # Reverse the importance list to match the original layer order
-    importance.reverse()
-    
-    return importance
+     
+    return importance[-1]
 
 
 # Example usage (assuming you have a model and activations list)
@@ -247,4 +269,10 @@ def dnn_train(args, file_path):
 
     average_activations = activation_recorder.calculate_average_activations()
     importance_scores = calculate_importance_pytorch(model, average_activations)
+    # convert the importance scores to a tensor
+    importance_scores = torch.tensor(importance_scores[0])
+    # divide the scores into 3 groups
+    importance_scores = importance_scores.view(3, -1)
+    # sum the importance scores for each group
+    importance_scores = importance_scores.sum(dim=1)
     print(importance_scores)
