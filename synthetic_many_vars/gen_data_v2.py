@@ -2,6 +2,7 @@ import random
 import sympy
 import os
 import argparse
+import json
 from sympy.parsing.sympy_parser import parse_expr
 from collections import Counter
 
@@ -9,14 +10,14 @@ from collections import Counter
 
 RUN_REAL = True 
 PRINT_SEPARATELY = True
-EXPERIMENT_TO_RUN = 2
+EXPERIMENT_TO_RUN = 1
 
 MAX_DEGREE = 2
 MAX_VAR_NUM = 10
 MAX_TERM_NUM = 5
 MAX_EXPR_NUM = 2
 if RUN_REAL:
-    SOL_NUM = 16*1024*16
+    SOL_NUM = 16*1024*4
 else:
     SOL_NUM = 4
 CONST_MAX = 512
@@ -27,22 +28,23 @@ else:
     MIN_SOL_NUM = 3
 ENABLE_INEQ = False
 PRINT_SOL = False
+WRITE_LABEL_FOR_POLY = False # if false, write labels for dependent variables
 
 assert SOL_NUM >= MIN_SOL_NUM
 
-# dict of variable name and its degree
-var_dict = {
-    0: "x",
-    1: "y",
-    2: "z",
-    3: "a",
-    4: "b",
-    5: "c",
-    6: "d",
-    7: "e",
-    8: "f",
-    9: "g"
-}
+def create_variable_dict(N):
+    """
+    Creates a dictionary where keys are integers from 0 to N-1,
+    and values are strings 'x' concatenated with the key.
+    
+    Parameters:
+    N (int): The number of key-value pairs in the dictionary.
+    
+    Returns:
+    dict: A dictionary with keys from 0 to N-1 and values as 'x' followed by the key.
+    """
+    # Use dictionary comprehension to create the dictionary
+    return {i: f'x{i}' for i in range(N)}
 
 class SingleItem:
     # degress list have a fixed length of var_num
@@ -59,8 +61,9 @@ class SingleExpr:
         self.item_list = item_list
         self.const = const
         self.str = ""
+        self.used_var = set()
 
-    def gen_str(self):
+    def gen_str(self, var_dict):
         if self.str != "":
             return
         for item in self.item_list:
@@ -78,7 +81,9 @@ class SingleExpr:
                 for degree in item.degree_list:
                     # print the expression with variable name
                     if degree != 0:
-                        self.str += "(" + var_dict[idx]
+                        var = var_dict[idx]
+                        self.used_var.add(idx)
+                        self.str += "(" + var
                         if degree != 1:
                             self.str += "**"
                             self.str += str(degree)
@@ -94,7 +99,7 @@ class SingleExpr:
 
     def print_expr(self):
         if self.is_eq == 1:
-            print(self.str + " = " + str(self.const))
+            print(self.str + " - " + str(self.const) + " = w?")
         else:
             print(self.str + " < " + str(self.const))
 
@@ -118,6 +123,7 @@ def check_imaginary(sol_list):
 
 def get_expr_list():
     expr_list = []
+    var_dict = create_variable_dict(MAX_VAR_NUM)
     # var_set is a set of indices of variables
     var_set = set()
     expr_num = random.randint(1, MAX_EXPR_NUM)
@@ -161,9 +167,13 @@ def get_expr_list():
 
     # print the expression
     for expr in expr_list:
-        expr.gen_str()
+        expr.gen_str(var_dict)
         expr.print_expr()
-    return expr_list, var_set
+    # get the used_var set of each expression
+    all_used_var_set = []
+    for expr in expr_list:
+        all_used_var_set = all_used_var_set + [expr.used_var]
+    return expr_list, var_set, all_used_var_set, var_dict
 
 
 # return the poly label for the degree
@@ -179,7 +189,66 @@ def get_poly_label(degree):
         raise Exception("degree is not supported")
 
 
-def print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, is_val):
+def save_poly_labels(label_dir_name, file_name, expr_list, MAX_VAR_NUM, get_poly_label):
+    """
+    Saves polynomial labels and other related information to a JSON file.
+
+    Parameters:
+    label_dir_name (str): The directory path where the file will be saved.
+    file_name (str): The name of the file to save.
+    expr_list (list): A list of expressions to process and save.
+    MAX_VAR_NUM (int): The maximum number of variables to consider for max degrees.
+    get_poly_label (function): A function that returns polynomial labels based on degree sum.
+    """
+    with open(label_dir_name + file_name + ".json", "w") as f:
+        num_expr = len(expr_list)
+        eq_str = ", ".join(["\"eq\""] * num_expr)
+        f.write("{\n")
+        f.write("  \"eq\": [" + eq_str + "],\n")
+        f.write("  \"op\": [\n")
+        for expr_idx, expr in enumerate(expr_list):
+            poly = {"x"}  # Initialize set with 'x'
+            for item in expr.item_list:
+                degree_sum = sum(item.degree_list)
+                poly_label = get_poly_label(degree_sum)
+                poly.add(poly_label)
+            poly_list = list(poly)
+            poly_str = ", ".join(f"\"{label}\"" for label in poly_list)
+            f.write(f"    [{poly_str}]")
+            if expr_idx < len(expr_list) - 1:
+                f.write(",\n")
+            else:
+                f.write("\n")
+        f.write("  ],\n")
+        max_degrees = [0 for _ in range(MAX_VAR_NUM)]
+        for expr in expr_list:
+            one_max_degrees = expr.get_max_degrees()
+            for idx, degree in enumerate(one_max_degrees):
+                max_degrees[idx] = max(max_degrees[idx], degree)
+        max_degrees_str = ", ".join(str(degree) for degree in max_degrees + [1, 1])
+        f.write(f"  \"max_degree\": [{max_degrees_str}]\n")
+        f.write("}\n")
+    f.close()
+
+
+def save_used_var_set(label_dir_name, file_name, all_used_var_set):
+    with open(label_dir_name + file_name + ".json", "w") as f:
+        f.write("{\n")
+        f.write("  \"used_var\": [\n")
+        for idx, used_var_set in enumerate(all_used_var_set):
+            used_var_list = list(used_var_set)
+            used_var_str = ", ".join(str(var) for var in used_var_list)
+            f.write(f"    [{used_var_str}]")
+            if idx < len(all_used_var_set) - 1:
+                f.write(",\n")
+            else:
+                f.write("\n")
+        f.write("  ]\n")
+        f.write("}\n")
+    f.close()
+
+
+def print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, all_used_var_set, is_val):
     equation_dir_name = "./val_equations/" if is_val else "./equations/"
     data_dir_name = "./val_data/" if is_val else "./data/"
     label_dir_name = "./val_label/" if is_val else "./label/"
@@ -223,56 +292,10 @@ def print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT
                 f.write("\n")
         f.close()        
         # store the poly lables to the file
-        with open(label_dir_name+file_name+".json", "w") as f:
-            num_expr = expr_list.__len__()
-            # print "eq" of the quantity of num_expr
-            eq_str = "\"eq\", " * num_expr
-            eq_str = eq_str[:-2]
-            f.write("{\n")
-            f.write("  \"eq\": [" + eq_str +"],\n")
-            f.write("  \"op\": [\n")
-            for expr_idx, expr in enumerate(expr_list, start=0):
-                # declare a set {}
-                poly = set()
-                # always add x since we use w on the RHS
-                poly.add("x")
-                # iterate through each item in the expr
-                for item in expr.item_list:
-                    # get its degree_list
-                    degree_list = item.degree_list
-                    # sum up the degree_list
-                    degree_sum = sum(degree_list)
-                    poly_label = get_poly_label(degree_sum)
-                    # add the poly_label to the set
-                    poly.add(poly_label)
-                # write the poly to the file
-                f.write("    [")
-                for poly_idx, poly_label in enumerate(poly, start=0):
-                    to_print = ""
-                    if poly_idx == poly.__len__() - 1:
-                        to_print = "\"" + str(poly_label) + "\""
-                    else:
-                        to_print = "\"" + str(poly_label) + "\", "
-                    f.write(to_print)
-                if expr_idx == expr_list.__len__() - 1:
-                    f.write("]\n")
-                else:
-                    f.write("],\n")
-            f.write("  ],\n")
-            # print the max degree for each variable
-            max_degrees = [0 for _ in range(MAX_VAR_NUM)]
-            for expr in expr_list:
-                one_max_degrees = expr.get_max_degrees()
-                for idx, degree in enumerate(one_max_degrees):
-                    if degree > max_degrees[idx]:
-                        max_degrees[idx] = degree
-            f.write("  \"max_degree\": [")
-            for degree in max_degrees:
-                f.write(str(degree) + ", ")
-            # add degrees for w0 and w1
-            f.write("1, 1]\n")
-            f.write("}\n")
-        f.close()        
+        if WRITE_LABEL_FOR_POLY == True:
+            save_poly_labels(label_dir_name, file_name, expr_list, MAX_VAR_NUM, get_poly_label)
+        else:
+            save_used_var_set(label_dir_name, file_name, all_used_var_set)
         return data_point_idx + 1
     else:
         return -1
@@ -340,6 +363,7 @@ class Stats:
         print("sol num: ")
         self.print_sol_num_dist()
 
+
 def main(args):
   # the program begins here
   # declare the variables
@@ -363,7 +387,7 @@ def main(args):
       # 2. we assign random numbers to x, y, z
   
   data_point_num = 0
-  data_point_idx = 0
+  data_point_idx = 10
   MAX_DIGIT_WIDTH = 8
   stats = Stats()
   # 16 is the number of data points (a set of equations and inequalities)
@@ -371,7 +395,7 @@ def main(args):
   while data_point_num < EXPERIMENT_TO_RUN:
       print("data point number: " + str(data_point_num))
       data_point_num += 1
-      expr_list, var_set = get_expr_list()
+      expr_list, var_set, all_used_var_set, var_dict = get_expr_list()
       stats.analyze_expr(expr_list)
       stats.analyze_var(var_set)
       expr_num = expr_list.__len__()
@@ -382,7 +406,7 @@ def main(args):
       # find up to SOL_NUM solutions to the equations
       sol_list = []
       # solve the equations with sympy
-      # try to get 512 solutions
+      # try to get SOL_NUM solutions
       run_num = 0
       while sol_list.__len__() < SOL_NUM:
           run_num += 1
@@ -457,7 +481,7 @@ def main(args):
               sol_list.append(sol)
   
       stats.analyze_sol(sol_list)
-      data_point_idx = print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, is_val=args.val)
+      data_point_idx = print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, all_used_var_set, is_val=args.val)
   
   stats.print_stats()
 

@@ -28,21 +28,26 @@ def sample_and_evaluate(expressions, num_samples):
 # Input from the user
 #f_expression = input("Enter the expression for f: ")
 #g_expression = input("Enter the expression for g: ")
-f_expression = "x * y - x - y"
-g_expression = "x + 2*z"
+f_expression = "4* x * y - 459"
+g_expression = "6 * x + 8 * z + 2 * y + x * a + 8 * y"
 
 # Number of samples
 #num_samples = int(input("Enter the number of samples: "))
-num_samples = 16*1024*4
+num_samples = 16*1024*8
 
 # Get the data
 variables, data = sample_and_evaluate([f_expression, g_expression], num_samples)
+#variables, data = sample_and_evaluate([f_expression], num_samples)
 
 # Write the data to a CSV file
-with open('function_data.csv', 'w', newline='') as file:
+filename = 'sympy.csv'
+with open(filename, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow([str(var) for var in variables] + [f'f({",".join(str(var) for var in variables)})', f'g({",".join(str(var) for var in variables)})'])  # write the header
+    if g_expression != "":
+      writer.writerow([str(var) for var in variables] + [f'f({",".join(str(var) for var in variables)})', f'g({",".join(str(var) for var in variables)})'])  # write the header
+    else:
+      writer.writerow([str(var) for var in variables] + [f'f({",".join(str(var) for var in variables)})'])  # write the header
     writer.writerows(data)
 
-print("Data has been written to function_data.csv")
+print("Data has been written to "+filename)
 
