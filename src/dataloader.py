@@ -223,4 +223,4 @@ def GenDataloader(file_path, batch_size, device, aug_data=False, shuffle=True, r
   
   # Create a DataLoader
   dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-  return dataloader 
+  return dataloader, var_dict 

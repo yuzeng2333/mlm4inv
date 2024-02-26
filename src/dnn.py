@@ -5,6 +5,7 @@ from config import input_size, num_heads, num_layers, dim_feedforward, max_seq_l
 from dataloader import GenDataloader, canonicalize
 import torch.optim as optim
 import numpy as np
+import json
 
 # Define the model
 class DivisionModel(nn.Module):
@@ -142,6 +143,68 @@ def calculate_importance_pytorch(model, activations):
     return importance[-1]
 
 
+def pick_scores(scores):
+    """
+    Picks scores from a list according to the specified rule:
+    Starts with the largest score, then keeps picking the next largest score
+    until the next largest score is less than 0.2 times the last picked score.
+
+    Parameters:
+    scores (list): A list of scores (floats or integers).
+    
+    Returns:
+    dict: A dictionary where the key is the original position of the score in the list,
+          and the value is the score itself.
+    """
+    # Sort the scores along with their original indices
+    sorted_scores_with_indices = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
+    
+    # Initialize the dictionary to store selected scores and their positions
+    selected_scores = {}
+    
+    # Keep track of the last picked score
+    last_picked_score = sorted_scores_with_indices[0][1]  # Start with the highest score
+    
+    for index, score in sorted_scores_with_indices:
+        if score < last_picked_score * 0.2:
+            break  # Stop if the next score is less than 0.2 times the last picked score
+        selected_scores[index] = score
+        last_picked_score = score  # Update the last picked score
+    
+    return selected_scores
+
+
+# the labels contain the set of used variables
+# read it with json
+def load_used_var_set(file_path):
+    with open(file_path, "r") as f:
+        data = json.load(f)
+    
+    all_used_var_set = []
+    for used_var_list in data["used_var"]:
+        used_var_set = set(used_var_list)
+        all_used_var_set.append(used_var_set)
+    
+    return all_used_var_set
+
+    
+def get_dependent_var(all_used_var_set, masked_var):
+    dependent_var = set()
+    for used_var_set in all_used_var_set:
+        if masked_var in used_var_set:
+            dependent_var = dependent_var.union(used_var_set)
+    # remove the masked_var from the dependent_var
+    dependent_var.remove(masked_var)
+    return dependent_var
+
+def get_var_indices(var_dict, var_set):
+    var_indices = []
+    for var in var_set:
+        var_indices.append(var_dict[var])
+    # sort
+    var_indices.sort()
+    return var_indices
+
 # Example usage (assuming you have a model and activations list)
 # importance_scores = calculate_importance_pytorch(model, activations)
 
@@ -163,14 +226,20 @@ def dnn_train(args, file_path):
     print('cuda is available: ', torch.cuda.is_available())
     print('cuda device count: ', torch.cuda.device_count())
   
-    var_num = 3
+    var_num = 5
     input_dim = 5
     model = DivisionModel(var_num, input_dim=input_dim, hidden_dim=64, output_dim=1)
     model = torch.nn.DataParallel(model)
     device = args.device
     batch_size = args.batch_size
     model.to(device)
-    dataloader = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
+    # if file_path is xxx/data/1.csv, then label_file_path is xxx/label/1.json
+    label_file_path = file_path.replace("data", "label").replace("csv", "json")
+    used_var_set = load_used_var_set(label_file_path)
+    dataloader, var_dict = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
+    masked_var = var_dict[MASK_IDX]
+    dependent_var = get_dependent_var(used_var_set, masked_var)
+    dependent_var_indices = get_var_indices(var_dict, dependent_var)
     if AUG_DATA:
         criterion = nn.MSELoss(reduction='sum').to(device)
     else:
@@ -218,8 +287,12 @@ def dnn_train(args, file_path):
 
             # Mask the data
             # This will set masked_data[i, idx, :] to random values for each i and corresponding idx
-            masked_data = masked_data[:, MASK_IDX+1:MASK_IDX+4, :]
-            assert var_num == masked_data.size(1)
+            #masked_data = masked_data[:, MASK_IDX+1:MASK_IDX+4, :]
+            masked_data = torch.cat((masked_data[:, :MASK_IDX, :], masked_data[:, MASK_IDX+1:, :]), dim=1)
+            if var_num != masked_data.size(1):
+                print("The number of variables is not correct:")
+                print(masked_data.size(1))
+                return
 
             # Forward pass
             ret = model(masked_data)
@@ -272,7 +345,24 @@ def dnn_train(args, file_path):
     # convert the importance scores to a tensor
     importance_scores = torch.tensor(importance_scores[0])
     # divide the scores into 3 groups
-    importance_scores = importance_scores.view(3, -1)
+    importance_scores = importance_scores.view(var_num, -1)
     # sum the importance scores for each group
     importance_scores = importance_scores.sum(dim=1)
     print(importance_scores)
+    # pick the scores
+    selected_scores = pick_scores(importance_scores)
+    # adjust the indices of the selected scores
+    # if the index is smaller than MASK_IDX, then the index is the same
+    # if the index is larger than or equal to MASK_IDX, then the index should be increased by 1
+    selected_scores = {i: selected_scores[i] for i in selected_scores if i < MASK_IDX}
+    selected_scores.update({i+1: selected_scores[i] for i in selected_scores if i >= MASK_IDX})
+    # collect the indices
+    selected_indices = list(selected_scores.keys())
+    # sort the indices
+    selected_indices.sort()
+    if dependent_var_indices == selected_indices:
+        print("The selected indices are the same as the dependent var indices")
+    else:
+        print("The selected indices are not the same as the dependent var indices")
+        print("The selected indices : ", selected_indices)
+        print("The dependent indices: ", dependent_var_indices)

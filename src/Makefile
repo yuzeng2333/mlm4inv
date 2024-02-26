@@ -8,4 +8,4 @@ load:
 	python mlm.py -b 32 -l
 
 score:
-	python -m pdb mlm.py -b 32 -e 20 -l
+	python -m pdb mlm.py -b 32 -e 30 -l
