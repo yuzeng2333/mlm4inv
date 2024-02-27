@@ -188,14 +188,16 @@ def load_used_var_set(file_path):
     return all_used_var_set
 
     
-def get_dependent_var(all_used_var_set, masked_var):
-    dependent_var = set()
+def get_dependent_var(all_used_var_set, masked_idx):
+    # assert: the masked_idx is a number
+    assert isinstance(masked_idx, int)
+    dependent_var_indices = set()
     for used_var_set in all_used_var_set:
-        if masked_var in used_var_set:
-            dependent_var = dependent_var.union(used_var_set)
+        if masked_idx in used_var_set:
+            dependent_var_indices = dependent_var_indices.union(used_var_set)
     # remove the masked_var from the dependent_var
-    dependent_var.remove(masked_var)
-    return dependent_var
+    dependent_var_indices.remove(masked_idx)
+    return dependent_var_indices
 
 def get_var_indices(var_dict, var_set):
     var_indices = []
@@ -226,7 +228,12 @@ def dnn_train(args, file_path):
     print('cuda is available: ', torch.cuda.is_available())
     print('cuda device count: ', torch.cuda.device_count())
   
-    var_num = 5
+
+    label_file_path = file_path.replace("data", "label").replace("csv", "json")
+    used_var_set = load_used_var_set(label_file_path)
+    dataloader, var_dict = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
+    dependent_var_indices = get_dependent_var(used_var_set, MASK_IDX)
+    var_num = len(var_dict)
     input_dim = 5
     model = DivisionModel(var_num, input_dim=input_dim, hidden_dim=64, output_dim=1)
     model = torch.nn.DataParallel(model)
@@ -234,12 +241,6 @@ def dnn_train(args, file_path):
     batch_size = args.batch_size
     model.to(device)
     # if file_path is xxx/data/1.csv, then label_file_path is xxx/label/1.json
-    label_file_path = file_path.replace("data", "label").replace("csv", "json")
-    used_var_set = load_used_var_set(label_file_path)
-    dataloader, var_dict = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
-    masked_var = var_dict[MASK_IDX]
-    dependent_var = get_dependent_var(used_var_set, masked_var)
-    dependent_var_indices = get_var_indices(var_dict, dependent_var)
     if AUG_DATA:
         criterion = nn.MSELoss(reduction='sum').to(device)
     else:

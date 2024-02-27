@@ -62,6 +62,8 @@ def read_data(file_path):
       header = next(reader)
       # fill the dict with variable names and their indices
       for i, var in enumerate(header):
+          # remove the spaces from the variable name
+          var = var.strip()
           var_dict[var] = i 
   
       # Read each row after the header
