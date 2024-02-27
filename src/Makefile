@@ -4,6 +4,9 @@ all:
 dbg:
 	python -m pdb mlm.py -b 32
 
+dbgl:
+	python -m pdb mlm.py -b 32 -l
+
 load:
 	python mlm.py -b 32 -l
 

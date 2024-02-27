@@ -156,6 +156,8 @@ def pick_scores(scores):
     dict: A dictionary where the key is the original position of the score in the list,
           and the value is the score itself.
     """
+    # convert scores to absolute values
+    scores = np.abs(scores)
     # Sort the scores along with their original indices
     sorted_scores_with_indices = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
     
@@ -188,16 +190,17 @@ def load_used_var_set(file_path):
     return all_used_var_set
 
     
-def get_dependent_var(all_used_var_set, masked_idx):
-    # assert: the masked_idx is a number
-    assert isinstance(masked_idx, int)
-    dependent_var_indices = set()
+def get_dependent_var(all_used_var_set, masked_var):
+    dependent_var = set()
     for used_var_set in all_used_var_set:
-        if masked_idx in used_var_set:
-            dependent_var_indices = dependent_var_indices.union(used_var_set)
+        if masked_var in used_var_set:
+            dependent_var = dependent_var.union(used_var_set)
+    # if the set is empty, raise an error
+    if len(dependent_var) == 0:
+        raise ValueError("The dependent variable set is empty")
     # remove the masked_var from the dependent_var
-    dependent_var_indices.remove(masked_idx)
-    return dependent_var_indices
+    dependent_var.remove(masked_var)
+    return dependent_var
 
 def get_var_indices(var_dict, var_set):
     var_indices = []
@@ -220,6 +223,7 @@ def dnn_train(args, file_path):
     USE_MASK = 1
     USE_RAND = 0
     USE_EXTRA_TOKEN = False
+    USE_RAND_MASK = True
     if args.all:
         RUN_ALL_BATCH = 1
     else:
@@ -228,17 +232,24 @@ def dnn_train(args, file_path):
     print('cuda is available: ', torch.cuda.is_available())
     print('cuda device count: ', torch.cuda.device_count())
   
-
+    device = args.device
+    batch_size = args.batch_size
     label_file_path = file_path.replace("data", "label").replace("csv", "json")
     used_var_set = load_used_var_set(label_file_path)
     dataloader, var_dict = GenDataloader(file_path, batch_size, device, aug_data=AUG_DATA, shuffle=False)
-    dependent_var_indices = get_dependent_var(used_var_set, MASK_IDX)
-    var_num = len(var_dict)
+    # find the var for MASK_IDX
+    mask_var = ""
+    for var, idx in var_dict.items():
+        if idx == MASK_IDX:
+            mask_var = var
+            break
+    dependent_var = get_dependent_var(used_var_set, mask_var)
+    var_num = len(var_dict) - 1
+    if USE_RAND_MASK:
+        MASK_IDX = np.random.randint(var_num-1)
     input_dim = 5
     model = DivisionModel(var_num, input_dim=input_dim, hidden_dim=64, output_dim=1)
     model = torch.nn.DataParallel(model)
-    device = args.device
-    batch_size = args.batch_size
     model.to(device)
     # if file_path is xxx/data/1.csv, then label_file_path is xxx/label/1.json
     if AUG_DATA:
@@ -352,15 +363,21 @@ def dnn_train(args, file_path):
     print(importance_scores)
     # pick the scores
     selected_scores = pick_scores(importance_scores)
+    # collect the indices
+    selected_indices = list(selected_scores.keys())
     # adjust the indices of the selected scores
     # if the index is smaller than MASK_IDX, then the index is the same
     # if the index is larger than or equal to MASK_IDX, then the index should be increased by 1
-    selected_scores = {i: selected_scores[i] for i in selected_scores if i < MASK_IDX}
-    selected_scores.update({i+1: selected_scores[i] for i in selected_scores if i >= MASK_IDX})
-    # collect the indices
-    selected_indices = list(selected_scores.keys())
+    for i in range(len(selected_indices)):
+        if selected_indices[i] >= MASK_IDX:
+            selected_indices[i] += 1
+
     # sort the indices
     selected_indices.sort()
+    # get the dependent var indices
+    dependent_var_indices = get_var_indices(var_dict, dependent_var)
+    dependent_var_indices.sort()
+    print("MASK_IDX: ", MASK_IDX)
     if dependent_var_indices == selected_indices:
         print("The selected indices are the same as the dependent var indices")
     else:

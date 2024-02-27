@@ -25,7 +25,7 @@ def get_args_parser():
     parser.add_argument('-a', '--all', action='store_true',
                         help="run all batches")
     # add epoch number
-    parser.add_argument('-e', '--epoch', default=1000, type=int,
+    parser.add_argument('-e', '--epoch', default=num_epochs, type=int,
                         help="epoch number")
     parser.add_argument('-m', '--model', type=str, default='dnn',
                         help="choose the model type: transformer or xgboost")
