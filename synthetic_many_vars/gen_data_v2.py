@@ -61,7 +61,7 @@ class SingleExpr:
         self.item_list = item_list
         self.const = const
         self.str = ""
-        self.used_var = set()
+        self.used_x_indices = set()
 
     def gen_str(self, var_dict):
         if self.str != "":
@@ -82,7 +82,7 @@ class SingleExpr:
                     # print the expression with variable name
                     if degree != 0:
                         var = var_dict[idx]
-                        self.used_var.add(idx)
+                        self.used_x_indices.add(idx)
                         self.str += "(" + var
                         if degree != 1:
                             self.str += "**"
@@ -170,10 +170,10 @@ def get_expr_list():
         expr.gen_str(var_dict)
         expr.print_expr()
     # get the used_var set of each expression
-    all_used_var_set = []
+    all_used_x_indices = []
     for expr in expr_list:
-        all_used_var_set = all_used_var_set + [expr.used_var]
-    return expr_list, var_set, all_used_var_set, var_dict
+        all_used_x_indices = all_used_x_indices + [expr.used_x_indices]
+    return expr_list, var_set, all_used_x_indices, var_dict
 
 
 # return the poly label for the degree
@@ -231,24 +231,27 @@ def save_poly_labels(label_dir_name, file_name, expr_list, MAX_VAR_NUM, get_poly
     f.close()
 
 
-def save_used_var_set(label_dir_name, file_name, all_used_var_set):
+def save_used_var_set(label_dir_name, file_name, all_used_x_indices):
     with open(label_dir_name + file_name + ".json", "w") as f:
         f.write("{\n")
         f.write("  \"used_var\": [\n")
-        for idx, used_var_set in enumerate(all_used_var_set):
-            used_var_list = list(used_var_set)
-            used_var_str = ", ".join(str(var) for var in used_var_list)
+        w_idx = 0
+        for idx, used_x_indices in enumerate(all_used_x_indices):
+            used_x_indices_list = list(used_x_indices)
+            used_var_str = ", ".join('x'+str(var) for var in used_x_indices_list)
+            used_var_str += ", w" + str(w_idx)
             f.write(f"    [{used_var_str}]")
-            if idx < len(all_used_var_set) - 1:
+            if idx < len(all_used_x_indices) - 1:
                 f.write(",\n")
             else:
                 f.write("\n")
+            w_idx += 1
         f.write("  ]\n")
         f.write("}\n")
     f.close()
 
 
-def print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, all_used_var_set, is_val):
+def print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, all_used_x_indices, is_val):
     equation_dir_name = "./val_equations/" if is_val else "./equations/"
     data_dir_name = "./val_data/" if is_val else "./data/"
     label_dir_name = "./val_label/" if is_val else "./label/"
@@ -295,7 +298,7 @@ def print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT
         if WRITE_LABEL_FOR_POLY == True:
             save_poly_labels(label_dir_name, file_name, expr_list, MAX_VAR_NUM, get_poly_label)
         else:
-            save_used_var_set(label_dir_name, file_name, all_used_var_set)
+            save_used_var_set(label_dir_name, file_name, all_used_x_indices)
         return data_point_idx + 1
     else:
         return -1
@@ -395,7 +398,7 @@ def main(args):
   while data_point_num < EXPERIMENT_TO_RUN:
       print("data point number: " + str(data_point_num))
       data_point_num += 1
-      expr_list, var_set, all_used_var_set, var_dict = get_expr_list()
+      expr_list, var_set, all_used_x_indices, var_dict = get_expr_list()
       stats.analyze_expr(expr_list)
       stats.analyze_var(var_set)
       expr_num = expr_list.__len__()
@@ -479,9 +482,10 @@ def main(args):
               if PRINT_SOL == True:
                   print(sol)
               sol_list.append(sol)
+              print("sol number: " + str(sol_num))
   
       stats.analyze_sol(sol_list)
-      data_point_idx = print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, all_used_var_set, is_val=args.val)
+      data_point_idx = print_result_to_separate_file(expr_list, sol_list, data_point_idx, MAX_DIGIT_WIDTH, all_used_x_indices, is_val=args.val)
   
   stats.print_stats()
 
